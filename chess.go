@@ -11,36 +11,7 @@ func main() {
 	var a uint16 = calc_a(w_x, w_y)
 	var white_is_current_player bool = true
 
-	initialize(w_x, w_y, a)
-
-	var pieces_a [16]pieces.Piece
-
-	pieces_a[0] = &pieces.Rook{
-		ChessObject: pieces.ChessObject{
-			Positioning: pieces.Positioning{
-				Position: [2]uint16{6, 4},
-			},
-			White: true,
-		},
-	}
-
-	pieces_a[1] = &pieces.Bishop{
-		ChessObject: pieces.ChessObject{
-			Positioning: pieces.Positioning{
-				Position: [2]uint16{5, 5},
-			},
-			White: true,
-		},
-	}
-
-	pieces_a[2] = &pieces.Pawn{
-		ChessObject: pieces.ChessObject{
-			Positioning: pieces.Positioning{
-				Position: [2]uint16{1, 1},
-			},
-			White: false,
-		},
-	}
+	pieces_a := initialize(w_x, w_y, a)
 
 	// fmt.Println(pieces[0].Give_Pos())
 
@@ -80,12 +51,42 @@ func main() {
 	}
 }
 
-func initialize(w_x, w_y, a uint16) {
+func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
 	Fenster(w_x, w_y)
 	Fenstertitel("Chess")
 	Stiftfarbe(0, 255, 0)
 	Vollrechteck(0, 0, w_x, w_y)
 	draw_board(a)
+
+	var pieces_a [64]pieces.Piece
+
+	pieces_a[0] = pieces.NewRook(0, 0, false)
+	pieces_a[1] = pieces.NewKnight(1, 0, false)
+	pieces_a[2] = pieces.NewBishop(2, 0, false)
+	pieces_a[3] = pieces.NewQueen(3, 0, false)
+	pieces_a[4] = pieces.NewKing(4, 0, false)
+	pieces_a[5] = pieces.NewBishop(5, 0, false)
+	pieces_a[6] = pieces.NewKnight(6, 0, false)
+	pieces_a[7] = pieces.NewRook(7, 0, false)
+
+	var i uint16
+	for i = 0; i < 8; i++ {
+		pieces_a[i+8] = pieces.NewPawn(i, 1, false)
+	}
+	for i = 0; i < 8; i++ {
+		pieces_a[i+16] = pieces.NewPawn(i, 6, true)
+	}
+
+	pieces_a[24] = pieces.NewRook(0, 7, true)
+	pieces_a[25] = pieces.NewKnight(1, 7, true)
+	pieces_a[26] = pieces.NewBishop(2, 7, true)
+	pieces_a[27] = pieces.NewQueen(3, 7, true)
+	pieces_a[28] = pieces.NewKing(4, 7, true)
+	pieces_a[29] = pieces.NewBishop(5, 7, true)
+	pieces_a[30] = pieces.NewKnight(6, 7, true)
+	pieces_a[31] = pieces.NewRook(7, 7, true)
+
+	return pieces_a
 }
 
 func calc_a(w_x, w_y uint16) uint16 {
@@ -98,7 +99,7 @@ func calc_a(w_x, w_y uint16) uint16 {
 	return a
 }
 
-func draw_pieces(pieces_a [16]pieces.Piece, w_x, w_y, a uint16) {
+func draw_pieces(pieces_a [64]pieces.Piece, w_x, w_y, a uint16) {
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
 			pieces.Draw(pieces_a[i], w_x, w_y, a)

@@ -6,7 +6,7 @@ import (
 )
 
 type Piece interface {
-	Calc_Moves(pieces_a [16]Piece)
+	Calc_Moves(pieces_a [64]Piece)
 	Piece_Is_White() bool
 	Give_Legal_Moves() [][2]uint16
 	Give_Pos() [2]uint16
@@ -111,8 +111,30 @@ type Pawn struct { //alle Schachobjekte erben wiederum vom datentyp ChessObject
 	ChessObject
 }
 
+func NewPawn(x, y uint16, is_white bool) *Pawn {
+	return &Pawn{
+		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
+	}
+}
+
 type Knight struct {
 	ChessObject
+}
+
+func NewKnight(x, y uint16, is_white bool) *Knight {
+	return &Knight{
+		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
+	}
+}
+
+type Bishop struct {
+	ChessObject
+}
+
+func NewBishop(x, y uint16, is_white bool) *Bishop {
+	return &Bishop{
+		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
+	}
 }
 
 type Rook struct {
@@ -120,12 +142,20 @@ type Rook struct {
 	ChessObject
 }
 
-type Bishop struct {
-	ChessObject
+func NewRook(x, y uint16, is_white bool) *Rook {
+	return &Rook{
+		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
+	}
 }
 
 type Queen struct {
 	ChessObject
+}
+
+func NewQueen(x, y uint16, is_white bool) *Queen {
+	return &Queen{
+		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
+	}
 }
 
 type King struct {
@@ -133,15 +163,65 @@ type King struct {
 	ChessObject
 }
 
-func (p *Pawn) Calc_Moves(pieces_a [16]Piece) {
-	fmt.Printf("Moves of Pawn")
+func NewKing(x, y uint16, is_white bool) *King {
+	return &King{
+		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
+	}
 }
 
-func (p *Knight) Calc_Moves(pieces_a [16]Piece) {
+func (p *Pawn) Calc_Moves(pieces_a [64]Piece) { //en passant --> nur unmittelbar nach dem bauern zweier zug, es darf kein anderer zug dazwischen liegen
+	fmt.Printf("Moves of Pawn")
+
+	var blocking_piece_1 bool
+	var blocking_piece_2 bool
+	new_legal_move_1 := [2]uint16{10, 10}
+	new_legal_move_2 := [2]uint16{10, 10}
+	new_legal_move_3 := [2]uint16{10, 10}
+	new_legal_move_4 := [2]uint16{10, 10}
+
+	if p.Is_White_Piece() && p.Position[1] != 0 {
+		new_legal_move_1 = [2]uint16{p.Position[0], p.Position[1] - 1}
+		if p.Position[1] > 1 && !p.Has_moved {
+			new_legal_move_2 = [2]uint16{p.Position[0], p.Position[1] - 2}
+		}
+		new_legal_move_3 = [2]uint16{p.Position[0] + 1, p.Position[1] - 1}
+		new_legal_move_4 = [2]uint16{p.Position[0] - 1, p.Position[1] - 1}
+	} else if p.Position[1] != 7 {
+		new_legal_move_1 = [2]uint16{p.Position[0], p.Position[1] + 1}
+		if p.Position[1] < 6 && !p.Has_moved {
+			new_legal_move_2 = [2]uint16{p.Position[0], p.Position[1] + 2}
+		}
+		new_legal_move_3 = [2]uint16{p.Position[0] + 1, p.Position[1] + 1}
+		new_legal_move_4 = [2]uint16{p.Position[0] - 1, p.Position[1] + 1}
+	}
+	for i := 0; i < len(pieces_a) && (!blocking_piece_1 || !blocking_piece_2); i++ {
+		if pieces_a[i] != nil {
+			if pieces_a[i].Give_Pos() == new_legal_move_1 {
+				blocking_piece_1 = true
+			} else if pieces_a[i].Give_Pos() == new_legal_move_2 {
+				blocking_piece_2 = true
+			} else if pieces_a[i].Give_Pos() == new_legal_move_3 && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() {
+				p.Append_Legal_Moves(new_legal_move_3)
+			} else if pieces_a[i].Give_Pos() == new_legal_move_4 && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() {
+				p.Append_Legal_Moves(new_legal_move_4)
+			}
+		}
+	}
+
+	if !blocking_piece_1 && new_legal_move_1 != [2]uint16{10, 10} { //es steht nichts im weg direkt davor
+		p.Append_Legal_Moves(new_legal_move_1)
+	}
+	if !blocking_piece_2 && new_legal_move_2 != [2]uint16{10, 10} { //es steht nichts im weg direkt davor
+		p.Append_Legal_Moves(new_legal_move_2)
+	}
+
+}
+
+func (p *Knight) Calc_Moves(pieces_a [64]Piece) {
 	fmt.Printf("Moves of Knight")
 }
 
-func (p *Rook) Calc_Moves(pieces_a [16]Piece) {
+func (p *Rook) Calc_Moves(pieces_a [64]Piece) {
 	p.Legal_Moves = nil
 
 	for new_x := p.Position[0]; new_x < 7; {
@@ -186,7 +266,7 @@ func (p *Rook) Calc_Moves(pieces_a [16]Piece) {
 	}
 }
 
-func (p *Bishop) Calc_Moves(pieces_a [16]Piece) {
+func (p *Bishop) Calc_Moves(pieces_a [64]Piece) {
 	p.Legal_Moves = nil
 
 	for new_x, new_y := p.Position[0], p.Position[1]; new_x < 7 && new_y < 7; {
@@ -203,7 +283,6 @@ func (p *Bishop) Calc_Moves(pieces_a [16]Piece) {
 		new_x++
 		new_y--
 		var current_pos [2]uint16 = [2]uint16{new_x, new_y}
-		fmt.Println(current_pos)
 
 		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
 			break
@@ -233,15 +312,15 @@ func (p *Bishop) Calc_Moves(pieces_a [16]Piece) {
 	}
 }
 
-func (p *Queen) Calc_Moves(pieces_a [16]Piece) {
+func (p *Queen) Calc_Moves(pieces_a [64]Piece) {
 	fmt.Printf("Moves of Queen")
 }
 
-func (p *King) Calc_Moves(pieces_a [16]Piece) {
+func (p *King) Calc_Moves(pieces_a [64]Piece) {
 	fmt.Printf("Moves of King")
 }
 
-func check_if_piece_is_blocking(p Piece, pieces_a [16]Piece, current_pos [2]uint16) bool {
+func check_if_piece_is_blocking(p Piece, pieces_a [64]Piece, current_pos [2]uint16) bool {
 	var blocking_piece Piece
 	var var_break bool = false
 
