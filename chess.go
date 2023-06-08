@@ -1,8 +1,9 @@
 package main
 
 import (
-	"chess"
 	. "gfxw"
+
+	"./pieces"
 )
 
 func main() {
@@ -12,29 +13,29 @@ func main() {
 
 	initialize(w_x, w_y, a)
 
-	var pieces [16]chess.Piece
+	var pieces_a [16]pieces.Piece
 
-	pieces[0] = &chess.Rook{
-		ChessObject: chess.ChessObject{
-			Positioning: chess.Positioning{
+	pieces_a[0] = &pieces.Rook{
+		ChessObject: pieces.ChessObject{
+			Positioning: pieces.Positioning{
 				Position: [2]uint16{6, 4},
 			},
 			White: true,
 		},
 	}
 
-	pieces[1] = &chess.Bishop{
-		ChessObject: chess.ChessObject{
-			Positioning: chess.Positioning{
+	pieces_a[1] = &pieces.Bishop{
+		ChessObject: pieces.ChessObject{
+			Positioning: pieces.Positioning{
 				Position: [2]uint16{5, 5},
 			},
 			White: true,
 		},
 	}
 
-	pieces[2] = &chess.Pawn{
-		ChessObject: chess.ChessObject{
-			Positioning: chess.Positioning{
+	pieces_a[2] = &pieces.Pawn{
+		ChessObject: pieces.ChessObject{
+			Positioning: pieces.Positioning{
 				Position: [2]uint16{1, 1},
 			},
 			White: false,
@@ -50,25 +51,25 @@ func main() {
 	// legal := pieces[1].Give_Legal_Moves()
 	// fmt.Println(legal[0].Position[1])
 
-	draw_pieces(pieces, w_x, w_y, a)
+	draw_pieces(pieces_a, w_x, w_y, a)
 
 	for { //gameloop
 		button, status, m_x, m_y := MausLesen1()
 
 		if status == 1 && button == 1 {
 			var current_field [2]uint16 = calc_field(w_x, w_y, m_x, m_y)
-			var current_piece chess.Piece
+			var current_piece pieces.Piece
 
-			for i := 0; i < len(pieces); i++ {
-				if pieces[i] != nil {
-					if current_field == pieces[i].Give_Pos() {
-						current_piece = pieces[i]
+			for i := 0; i < len(pieces_a); i++ {
+				if pieces_a[i] != nil {
+					if current_field == pieces_a[i].Give_Pos() {
+						current_piece = pieces_a[i]
 					}
 				}
 			}
 
 			if current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player { //wenn die maus ein piece angeklickt hat, welches dem aktuellen spieler gehört
-				current_piece.Calc_Moves(pieces)
+				current_piece.Calc_Moves(pieces_a)
 				var current_legal_moves [][2]uint16 = current_piece.Give_Legal_Moves()
 				for k := 0; k < len(current_legal_moves); k++ {
 					highlight(a, current_legal_moves[k])
@@ -97,10 +98,10 @@ func calc_a(w_x, w_y uint16) uint16 {
 	return a
 }
 
-func draw_pieces(pieces [16]chess.Piece, w_x, w_y, a uint16) {
-	for i := 0; i < len(pieces); i++ {
-		if pieces[i] != nil {
-			chess.Draw(pieces[i], w_x, w_y, a)
+func draw_pieces(pieces_a [16]pieces.Piece, w_x, w_y, a uint16) {
+	for i := 0; i < len(pieces_a); i++ {
+		if pieces_a[i] != nil {
+			pieces.Draw(pieces_a[i], w_x, w_y, a)
 		}
 	}
 }
