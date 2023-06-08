@@ -17,7 +17,7 @@ func main() {
 	pieces[0] = &chess.Rook{
 		ChessObject: chess.ChessObject{
 			Positioning: chess.Positioning{
-				Position: [2]uint16{5, 4},
+				Position: [2]uint16{6, 4},
 			},
 			White: true,
 		},
@@ -28,14 +28,14 @@ func main() {
 			Positioning: chess.Positioning{
 				Position: [2]uint16{5, 5},
 			},
-			White: false,
+			White: true,
 		},
 	}
 
 	pieces[2] = &chess.Pawn{
 		ChessObject: chess.ChessObject{
 			Positioning: chess.Positioning{
-				Position: [2]uint16{1, 6},
+				Position: [2]uint16{1, 1},
 			},
 			White: false,
 		},
