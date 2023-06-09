@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	. "gfxw"
 
 	"./pieces"
@@ -12,6 +13,8 @@ func main() {
 	var white_is_current_player bool = true
 
 	pieces_a := initialize(w_x, w_y, a)
+
+	var moves_counter int16
 
 	// fmt.Println(pieces[0].Give_Pos())
 
@@ -40,10 +43,32 @@ func main() {
 			}
 
 			if current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player { //wenn die maus ein piece angeklickt hat, welches dem aktuellen spieler gehört
-				current_piece.Calc_Moves(pieces_a)
+				current_piece.Calc_Moves(pieces_a, moves_counter)
 				var current_legal_moves [][2]uint16 = current_piece.Give_Legal_Moves()
+				var x_offset int16 = int16(current_piece.Give_Pos()[0]*a) - int16(m_x)
+				var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
+				fmt.Println("x offset: ", x_offset)
+				fmt.Println("y offset: ", y_offset)
+
+				UpdateAus()
+				draw_board(a)
+				highlight(a, current_piece.Give_Pos(), 255, 50, 0)
+				fmt.Println(current_legal_moves)
 				for k := 0; k < len(current_legal_moves); k++ {
-					highlight(a, current_legal_moves[k])
+					highlight(a, current_legal_moves[k], 0, 255, 0)
+				}
+				draw_pieces(pieces_a, w_x, w_y, a)
+				UpdateAn()
+
+				for {
+					button, status, m_x, m_y := MausLesen1()
+					if status != -1 && button == 1 {
+						UpdateAus()
+						pieces.Draw_To_Mouce(current_piece, w_x, w_y, a, m_x, m_y, x_offset, y_offset)
+						UpdateAn()
+					} else {
+						break
+					}
 				}
 				// fmt.Println(current_piece.Give_Pos())
 			}
@@ -86,6 +111,7 @@ func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
 	pieces_a[30] = pieces.NewKnight(6, 7, true)
 	pieces_a[31] = pieces.NewRook(7, 7, true)
 
+	pieces_a[32] = pieces.NewPawn(3, 5, false)
 	return pieces_a
 }
 
@@ -107,13 +133,13 @@ func draw_pieces(pieces_a [64]pieces.Piece, w_x, w_y, a uint16) {
 	}
 }
 
-func highlight(a uint16, pos [2]uint16) {
+func highlight(a uint16, pos [2]uint16, r, g, b uint8) {
 
 	var cord_x uint16 = a * pos[0]
 	var cord_y uint16 = a * pos[1]
 
 	Transparenz(170)
-	Stiftfarbe(0, 255, 0)
+	Stiftfarbe(r, g, b)
 	Vollrechteck(cord_x, cord_y, a, a)
 	Transparenz(0)
 }
