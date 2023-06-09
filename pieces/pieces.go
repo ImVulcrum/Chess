@@ -2,7 +2,7 @@ package pieces
 
 import (
 	"fmt"
-	. "gfxw"
+	gfx "gfxw"
 )
 
 type Piece interface {
@@ -33,67 +33,72 @@ func (c *ChessObject) Is_White_Piece() bool {
 }
 
 func Copy_Piece_To_Clipboard(piece Piece, w_x, w_y, a uint16) {
-	Archivieren()
-	LadeBild(0, 0, "C:\\Users\\liamw\\Documents\\_Privat\\_Go\\Chess\\Pieces2.bmp")
+	gfx.LadeBild(0, 0, "C:\\Users\\liamw\\Documents\\_Privat\\_Go\\Chess\\Pieces.bmp")
 
 	switch piece.(type) {
 	case *Pawn:
 		if piece.Is_White_Piece() {
-			Clipboard_kopieren(0, a, a, a)
+			gfx.Clipboard_kopieren(0, a, a, a)
 		} else {
-			Clipboard_kopieren(0, 0, a, a)
+			gfx.Clipboard_kopieren(0, 0, a, a)
 		}
 	case *Knight:
 		if piece.Is_White_Piece() {
-			Clipboard_kopieren(a, a, a, a)
+			gfx.Clipboard_kopieren(a, a, a, a)
 		} else {
-			Clipboard_kopieren(a, 0, a, a)
+			gfx.Clipboard_kopieren(a, 0, a, a)
 		}
 	case *Bishop:
 		if piece.Is_White_Piece() {
-			Clipboard_kopieren(2*a, a, a, a)
+			gfx.Clipboard_kopieren(2*a, a, a, a)
 		} else {
-			Clipboard_kopieren(2*a, 0, a, a)
+			gfx.Clipboard_kopieren(2*a, 0, a, a)
 		}
 	case *Rook:
 		if piece.Is_White_Piece() {
-			Clipboard_kopieren(3*a, a, a, a)
+			gfx.Clipboard_kopieren(3*a, a, a, a)
 		} else {
-			Clipboard_kopieren(3*a, 0, a, a)
+			gfx.Clipboard_kopieren(3*a, 0, a, a)
 		}
 	case *Queen:
 		if piece.Is_White_Piece() {
-			Clipboard_kopieren(4*a, a, a, a)
+			gfx.Clipboard_kopieren(4*a, a, a, a)
 		} else {
-			Clipboard_kopieren(4*a, 0, a, a)
+			gfx.Clipboard_kopieren(4*a, 0, a, a)
 		}
 	case *King:
 		if piece.Is_White_Piece() {
-			Clipboard_kopieren(5*a, a, a, a)
+			gfx.Clipboard_kopieren(5*a, a, a, a)
 		} else {
-			Clipboard_kopieren(5*a, 0, a, a)
+			gfx.Clipboard_kopieren(5*a, 0, a, a)
 		}
 	default:
 		fmt.Println("Unknown Piece type")
 	}
-
-	Restaurieren(0, 0, w_x, w_y)
 }
 
 func Draw(piece Piece, w_x, w_y, a uint16) {
 	Copy_Piece_To_Clipboard(piece, w_x, w_y, a)
-	Clipboard_einfuegenMitColorKey(piece.Give_Pos()[0]*a, piece.Give_Pos()[1]*a, 5, 5, 5)
 }
 
 func Draw_To_Mouce(piece Piece, w_x, w_y, a, m_x, m_y uint16, x_offset, y_offset int16) {
 	Copy_Piece_To_Clipboard(piece, w_x, w_y, a)
-	Transparenz(150)
-	Clipboard_einfuegenMitColorKey(uint16(int16(m_x)+x_offset), uint16(int16(m_y)+y_offset), 5, 5, 5)
-	Transparenz(0)
 }
 
-func Move_Piece_To(piece Piece, new_position [2]uint16, moves_counter int16) {
-	piece.Move_To(new_position)
+func Move_Piece_To(piece Piece, new_position [2]uint16, moves_counter int16, pieces_a [64]Piece) ([64]Piece, bool) {
+	var smth_has_been_taken bool = false
+
+	for k := 0; k < len(pieces_a); k++ {
+		if pieces_a[k] != nil && pieces_a[k].Give_Pos() == new_position {
+			if pieces_a[k].Is_White_Piece() != piece.Is_White_Piece() {
+				pieces_a[k] = nil
+				smth_has_been_taken = true
+			} else {
+				fmt.Println("panic: Error has occured, trying to take a piece of same color")
+			}
+			break
+		}
+	}
 	if pawn, ok := piece.(*Pawn); ok {
 		var double_move [2]uint16
 		if pawn.Is_White_Piece() {
@@ -107,6 +112,9 @@ func Move_Piece_To(piece Piece, new_position [2]uint16, moves_counter int16) {
 			pawn.Has_moved = 0
 		}
 	}
+	piece.Move_To(new_position)
+
+	return pieces_a, smth_has_been_taken
 }
 
 func (c *ChessObject) Move_To(new_position [2]uint16) {
@@ -195,7 +203,7 @@ func NewKing(x, y uint16, is_white bool) *King {
 	}
 }
 
-func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) { //en passant --> nur unmittelbar nach dem bauern zweier zug, es darf kein anderer zug dazwischen liegen
+func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 
 	var blocking_piece_1 bool
@@ -204,26 +212,34 @@ func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) { //en passan
 	new_legal_move_2 := [2]uint16{10, 10}
 	new_legal_move_3 := [2]uint16{10, 10}
 	new_legal_move_4 := [2]uint16{10, 10}
-	var en_passant_right [2]uint16
-	var en_passant_left [2]uint16
+	en_passant_right := [2]uint16{p.Position[0] + 1, p.Position[1]}
+	en_passant_left := [2]uint16{p.Position[0] - 1, p.Position[1]}
 
+	var direction int16 = 0
+	if p.Is_White_Piece() {
+		direction = -1
+	} else {
+		direction = 1
+	}
+
+	//definition der hypothetischen felder je nach farbe
 	if p.Is_White_Piece() && p.Position[1] != 0 {
-		new_legal_move_1 = [2]uint16{p.Position[0], p.Position[1] - 1}
+		new_legal_move_1 = [2]uint16{p.Position[0], p.Position[1] - 1} //einer move
 		if p.Position[1] > 1 && p.Has_moved == -1 {
 			new_legal_move_2 = [2]uint16{p.Position[0], p.Position[1] - 2} //zweier move
 		}
-		new_legal_move_3 = [2]uint16{p.Position[0] + 1, p.Position[1] - 1}
-		new_legal_move_4 = [2]uint16{p.Position[0] - 1, p.Position[1] - 1}
-	} else if p.Position[1] != 7 {
-		new_legal_move_1 = [2]uint16{p.Position[0], p.Position[1] + 1}
-		if p.Position[1] < 6 && p.Has_moved == -1 { //zweier move
-			new_legal_move_2 = [2]uint16{p.Position[0], p.Position[1] + 2}
+		new_legal_move_3 = [2]uint16{p.Position[0] + 1, p.Position[1] - 1} //schlagen rechts
+		new_legal_move_4 = [2]uint16{p.Position[0] - 1, p.Position[1] - 1} //schlagen links
+	} else if !p.Is_White_Piece() && p.Position[1] != 7 {
+		new_legal_move_1 = [2]uint16{p.Position[0], p.Position[1] + 1} //einer move
+		if p.Position[1] < 6 && p.Has_moved == -1 {
+			new_legal_move_2 = [2]uint16{p.Position[0], p.Position[1] + 2} //zweier move
 		}
-		new_legal_move_3 = [2]uint16{p.Position[0] + 1, p.Position[1] + 1}
-		new_legal_move_4 = [2]uint16{p.Position[0] - 1, p.Position[1] + 1}
+		new_legal_move_3 = [2]uint16{p.Position[0] + 1, p.Position[1] + 1} //schlagen rechts
+		new_legal_move_4 = [2]uint16{p.Position[0] - 1, p.Position[1] + 1} //schlagen links
 	}
-	en_passant_right = [2]uint16{p.Position[0] + 1, p.Position[1]}
-	en_passant_left = [2]uint16{p.Position[0] - 1, p.Position[1]}
+
+	//überprüfen der hyothetischen felder
 	for i := 0; i < len(pieces_a) && (!blocking_piece_1 || !blocking_piece_2); i++ {
 		if pieces_a[i] != nil {
 			if pieces_a[i].Give_Pos() == new_legal_move_1 {
@@ -234,12 +250,15 @@ func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) { //en passan
 				p.Append_Legal_Moves(new_legal_move_3)
 			} else if pieces_a[i].Give_Pos() == new_legal_move_4 && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() { //schlagen links
 				p.Append_Legal_Moves(new_legal_move_4)
-			} else if en_passant_pawn1, ok := pieces_a[i].(*Pawn); ok && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == en_passant_right { //andersfarbiger pawn rechts neben dem pawn
+			} else if en_passant_pawn1, ok := pieces_a[i].(*Pawn); ok && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == en_passant_right {
+				//andersfarbiger pawn rechts neben dem pawn --> en passant rechts
 				if en_passant_pawn1.Has_moved > 0 && en_passant_pawn1.Has_moved+2 == moves_counter {
 					p.Append_Legal_Moves(new_legal_move_3)
 				}
-			} else if en_passant_pawn2, ok := pieces_a[i].(*Pawn); ok && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == en_passant_left { //andersfarbiger pawn links neben dem pawn
-				if en_passant_pawn2.Has_moved > 0 && en_passant_pawn2.Has_moved+2 == moves_counter {
+			} else if en_passant_pawn2, ok := pieces_a[i].(*Pawn); ok && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == en_passant_left {
+				//andersfarbiger pawn links neben dem pawn --> en passant links
+				fmt.Println("en passant")
+				if en_passant_pawn2.Has_moved > 0 && en_passant_pawn2.Has_moved+1 == moves_counter {
 					p.Append_Legal_Moves(new_legal_move_4)
 				}
 			}
@@ -331,7 +350,6 @@ func (p *Bishop) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 		new_x--
 		new_y++
 		var current_pos [2]uint16 = [2]uint16{new_x, new_y}
-		fmt.Println(current_pos)
 
 		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
 			break
@@ -342,7 +360,6 @@ func (p *Bishop) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 		new_x--
 		new_y--
 		var current_pos [2]uint16 = [2]uint16{new_x, new_y}
-		fmt.Println(current_pos)
 
 		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
 			break

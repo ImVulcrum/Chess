@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	. "gfxw"
 
 	"./pieces"
@@ -14,7 +13,7 @@ func main() {
 
 	pieces_a := initialize(w_x, w_y, a)
 
-	var moves_counter int16
+	var moves_counter int16 = 1
 
 	// fmt.Println(pieces[0].Give_Pos())
 
@@ -28,16 +27,22 @@ func main() {
 	draw_pieces(pieces_a, w_x, w_y, a)
 
 	for { //gameloop
+
 		button, status, m_x, m_y := MausLesen1()
 
 		if status == 1 && button == 1 {
-			var current_field [2]uint16 = calc_field(w_x, w_y, m_x, m_y)
+			// UpdateAus()
+			// draw_board(a)
+			// draw_pieces(pieces_a, w_x, w_y, a)
+			// UpdateAn()
+			var current_field [2]uint16 = calc_field(a, m_x, m_y)
 			var current_piece pieces.Piece
 
 			for i := 0; i < len(pieces_a); i++ {
 				if pieces_a[i] != nil {
 					if current_field == pieces_a[i].Give_Pos() {
 						current_piece = pieces_a[i]
+						break
 					}
 				}
 			}
@@ -47,13 +52,11 @@ func main() {
 				var current_legal_moves [][2]uint16 = current_piece.Give_Legal_Moves()
 				var x_offset int16 = int16(current_piece.Give_Pos()[0]*a) - int16(m_x)
 				var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
-				fmt.Println("x offset: ", x_offset)
-				fmt.Println("y offset: ", y_offset)
 
 				UpdateAus()
 				draw_board(a)
 				highlight(a, current_piece.Give_Pos(), 255, 50, 0)
-				fmt.Println(current_legal_moves)
+				// fmt.Println(current_legal_moves)
 				for k := 0; k < len(current_legal_moves); k++ {
 					highlight(a, current_legal_moves[k], 0, 255, 0)
 				}
@@ -64,16 +67,55 @@ func main() {
 					button, status, m_x, m_y := MausLesen1()
 					if status != -1 && button == 1 {
 						UpdateAus()
+
+						Restaurieren(0, 0, w_x, w_y)
+
+						Archivieren()
 						pieces.Draw_To_Mouce(current_piece, w_x, w_y, a, m_x, m_y, x_offset, y_offset)
+						Restaurieren(0, 0, w_x, w_y)
+
+						Archivieren()
+
+						Transparenz(150)
+						Clipboard_einfuegenMitColorKey(uint16(int16(m_x)+x_offset), uint16(int16(m_y)+y_offset), 5, 5, 5)
+						Transparenz(0)
+
 						UpdateAn()
 					} else {
+						new_field := calc_field(a, uint16(int16(m_x)+x_offset+int16(a)/2), uint16(int16(m_y)+y_offset+int16(a)/2))
+
+						if new_field == current_piece.Give_Pos() {
+							Restaurieren(0, 0, w_x, w_y)
+							break
+						}
+						// highlight(a, new_field, 0, 0, 255)
+						for k := 0; k < len(current_legal_moves); k++ {
+							if new_field == current_legal_moves[k] { //es wurde eine Figur bewegt
+								pieces_a, _ = pieces.Move_Piece_To(current_piece, new_field, moves_counter, pieces_a)
+								white_is_current_player = change_player(white_is_current_player)
+								moves_counter++
+								break
+							}
+						}
+						UpdateAus()
+						draw_board(a)
+						draw_pieces(pieces_a, w_x, w_y, a)
+						UpdateAn()
 						break
 					}
 				}
-				// fmt.Println(current_piece.Give_Pos())
 			}
 		}
 	}
+}
+
+func change_player(white_is_current_player bool) bool {
+	if white_is_current_player {
+		white_is_current_player = false
+	} else {
+		white_is_current_player = true
+	}
+	return white_is_current_player
 }
 
 func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
@@ -128,9 +170,14 @@ func calc_a(w_x, w_y uint16) uint16 {
 func draw_pieces(pieces_a [64]pieces.Piece, w_x, w_y, a uint16) {
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
+			Archivieren()
 			pieces.Draw(pieces_a[i], w_x, w_y, a)
+			Restaurieren(0, 0, w_x, w_y)
+
+			Clipboard_einfuegenMitColorKey(pieces_a[i].Give_Pos()[0]*a, pieces_a[i].Give_Pos()[1]*a, 5, 5, 5)
 		}
 	}
+	Archivieren()
 }
 
 func highlight(a uint16, pos [2]uint16, r, g, b uint8) {
@@ -172,14 +219,7 @@ func draw_board(a uint16) {
 	}
 }
 
-func calc_field(w_x, w_y, m_x, m_y uint16) [2]uint16 {
-	var a uint16
-	if w_x < w_y {
-		a = w_x / 8
-	} else {
-		a = w_y / 8
-	}
-
+func calc_field(a, m_x, m_y uint16) [2]uint16 {
 	var current_field [2]uint16
 
 	current_field[0] = m_x / a
