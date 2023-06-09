@@ -214,15 +214,6 @@ func NewKing(x, y uint16, is_white bool) *King {
 func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 
-	// var blocking_piece_1 bool
-	// var blocking_piece_2 bool
-	// new_legal_move_1 := [2]uint16{10, 10}
-	// new_legal_move_2 := [2]uint16{10, 10}
-	// new_legal_move_3 := [2]uint16{10, 10}
-	// new_legal_move_4 := [2]uint16{10, 10}
-	// en_passant_right := [2]uint16{p.Position[0] + 1, p.Position[1]}
-	// en_passant_left := [2]uint16{p.Position[0] - 1, p.Position[1]}
-
 	var direction int16 = 0
 	var last_y uint16
 	if p.Is_White_Piece() {
@@ -240,60 +231,9 @@ func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 		if p.Position[1] != uint16(int16(last_y)-direction) && p.Has_moved == -1 {
 			p.can_move(pieces_a, [2]uint16{p.Position[0], uint16(int16(p.Position[1]) + direction*2)}) //zweier move
 		}
-		p.can_do_enpassant(pieces_a, [2]uint16{p.Position[0] + 1, uint16(int16(p.Position[1]) + direction)}, [2]uint16{p.Position[0] + 1, p.Position[1]}, moves_counter)
-		p.can_do_enpassant(pieces_a, [2]uint16{p.Position[0] - 1, uint16(int16(p.Position[1]) + direction)}, [2]uint16{p.Position[0] - 1, p.Position[1]}, moves_counter)
+		p.can_do_enpassant(pieces_a, [2]uint16{p.Position[0] + 1, uint16(int16(p.Position[1]) + direction)}, [2]uint16{p.Position[0] + 1, p.Position[1]}, moves_counter) //enpassant
+		p.can_do_enpassant(pieces_a, [2]uint16{p.Position[0] - 1, uint16(int16(p.Position[1]) + direction)}, [2]uint16{p.Position[0] - 1, p.Position[1]}, moves_counter) //enpassant
 	}
-
-	// //definition der hypothetischen felder je nach farbe
-	// if p.Is_White_Piece() && p.Position[1] != 0 {
-	// 	new_legal_move_1 = [2]uint16{p.Position[0], p.Position[1] - 1} //einer move
-	// 	if p.Position[1] > 1 && p.Has_moved == -1 {
-	// 		new_legal_move_2 = [2]uint16{p.Position[0], p.Position[1] - 2} //zweier move
-	// 	}
-	// 	new_legal_move_3 = [2]uint16{p.Position[0] + 1, p.Position[1] - 1} //schlagen rechts
-	// 	new_legal_move_4 = [2]uint16{p.Position[0] - 1, p.Position[1] - 1} //schlagen links
-	// } else if !p.Is_White_Piece() && p.Position[1] != 7 {
-	// 	new_legal_move_1 = [2]uint16{p.Position[0], p.Position[1] + 1} //einer move
-	// 	if p.Position[1] < 6 && p.Has_moved == -1 {
-	// 		new_legal_move_2 = [2]uint16{p.Position[0], p.Position[1] + 2} //zweier move
-	// 	}
-	// 	new_legal_move_3 = [2]uint16{p.Position[0] + 1, p.Position[1] + 1} //schlagen rechts
-	// 	new_legal_move_4 = [2]uint16{p.Position[0] - 1, p.Position[1] + 1} //schlagen links
-	// }
-
-	//überprüfen der hyothetischen felder
-	// for i := 0; i < len(pieces_a) && (!blocking_piece_1 || !blocking_piece_2); i++ {
-	// 	if pieces_a[i] != nil {
-	// 		if pieces_a[i].Give_Pos() == new_legal_move_1 {
-	// 			blocking_piece_1 = true
-	// 		} else if pieces_a[i].Give_Pos() == new_legal_move_2 {
-	// 			blocking_piece_2 = true
-	// 		} else if pieces_a[i].Give_Pos() == new_legal_move_3 && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() { //schlagen rechts
-	// 			p.Append_Legal_Moves(new_legal_move_3)
-	// 		} else if pieces_a[i].Give_Pos() == new_legal_move_4 && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() { //schlagen links
-	// 			p.Append_Legal_Moves(new_legal_move_4)
-	// 		} else if en_passant_pawn1, ok := pieces_a[i].(*Pawn); ok && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == en_passant_right {
-	// 			//andersfarbiger pawn rechts neben dem pawn --> en passant rechts
-	// 			if en_passant_pawn1.Has_moved > 0 && en_passant_pawn1.Has_moved+1 == moves_counter {
-	// 				p.Append_Legal_Moves(new_legal_move_3)
-	// 			}
-	// 		} else if en_passant_pawn2, ok := pieces_a[i].(*Pawn); ok && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == en_passant_left {
-	// 			//andersfarbiger pawn links neben dem pawn --> en passant links
-	// 			fmt.Println("en passant")
-	// 			if en_passant_pawn2.Has_moved > 0 && en_passant_pawn2.Has_moved+1 == moves_counter {
-	// 				p.Append_Legal_Moves(new_legal_move_4)
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	// if !blocking_piece_1 && new_legal_move_1 != [2]uint16{10, 10} { //es steht nichts im weg direkt davor einer move
-	// 	p.Append_Legal_Moves(new_legal_move_1)
-	// }
-	// if !blocking_piece_1 && !blocking_piece_2 && new_legal_move_2 != [2]uint16{10, 10} { //es steht nichts im weg direkt davor zweier move
-	// 	p.Append_Legal_Moves(new_legal_move_2)
-	// }
-
 }
 
 func (p *Pawn) can_take(pieces_a [64]Piece, field [2]uint16) {
