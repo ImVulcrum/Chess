@@ -35,7 +35,6 @@ func Draw_To_Mouce(piece Piece, w_x, w_y, a, m_x, m_y uint16, x_offset, y_offset
 func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece) [64]Piece { //rook and king has moved change
 
 	if king, ok := piece.(*King); ok {
-
 		if new_position[2] == 64 { //normal move
 			king.Has_moved = 1
 		} else if new_position[2] <= 63 { //castle
@@ -58,34 +57,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 			fmt.Println("panic: Error has occured, king move status is out of range")
 		}
 
-		// 	castle_moves := King.Calc_Castle_Moves(pieces_a)
-
-		// 	for k := 0; k < 2; k++ {
-		// 		if castle_moves[k] == new_position {
-		// 			if k == 0 { //right castle
-		// 				new_position = [2]uint16{King.Give_Pos()[0] + 2, King.Give_Pos()[1]}
-		// 				Rook := pieces_a[castle_moves[2][0]]
-		// 				Rook.Move_To([2]uint16{Rook.Give_Pos()[0] - 2, Rook.Give_Pos()[1]})
-		// 			} else if k == 1 { //left castle
-		// 				new_position = [2]uint16{King.Give_Pos()[0] - 2, King.Give_Pos()[1]}
-		// 				Rook := pieces_a[castle_moves[2][1]]
-		// 				Rook.Move_To([2]uint16{Rook.Give_Pos()[0] + 3, Rook.Give_Pos()[1]})
-		// 			}
-		// 		}
-		// 	}
 	} else if pawn, ok := piece.(*Pawn); ok {
-		// var double_move [2]uint16
-		// if pawn.Is_White_Piece() {
-		// 	double_move = [2]uint16{pawn.Position[0], pawn.Position[1] - 2}
-		// } else {
-		// 	double_move = [2]uint16{pawn.Position[0], pawn.Position[1] + 2}
-		// }
-		// if new_position == double_move {
-		// 	pawn.Has_moved = moves_counter
-		// } else {
-		// 	pawn.Has_moved = 0
-		// }
-
 		if new_position[2] == 65 { //double_move
 			pawn.Has_moved = moves_counter
 		} else if new_position[2] <= 63 { //en passant
@@ -100,12 +72,6 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 			fmt.Println("panic: Error has occured, pawn move status is out of range")
 		}
 
-		// if index := pawn.can_do_enpassant(pieces_a, new_position, [2]uint16{pawn.Position[0] + 1, pawn.Position[1]}, moves_counter); index != -1 {
-		// 	pieces_a[index] = nil
-		// }
-		// if index := pawn.can_do_enpassant(pieces_a, new_position, [2]uint16{pawn.Position[0] - 1, pawn.Position[1]}, moves_counter); index != -1 {
-		// 	pieces_a[index] = nil
-		// }
 	} else {
 		if new_position[2] == 64 { //normal piece normal move
 			piece.Set_Has_Moved(1)
@@ -116,16 +82,6 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 			fmt.Println("panic: Error has occured, normal piece move status is out of range")
 		}
 	}
-	// for k := 0; k < len(pieces_a); k++ {
-	// 	if pieces_a[k] != nil && pieces_a[k].Give_Pos() == new_position {
-	// 		if pieces_a[k].Is_White_Piece() != piece.Is_White_Piece() {
-	// 			pieces_a[k] = nil
-	// 		} else {
-	// 			fmt.Println("panic: Error has occured, trying to take a piece of same color")
-	// 		}
-	// 		break
-	// 	}
-	// }
 
 	piece.Move_To([2]uint16{new_position[0], new_position[1]})
 
@@ -176,15 +132,6 @@ func NewKing(x, y uint16, is_white bool) *King {
 	}
 }
 
-func (p *King) calc_normal_move(pieces_a [64]Piece, field [2]uint16) {
-	if can_move(p, pieces_a, field) {
-		p.Append_Legal_Moves([3]uint16{field[0], field[1], 64})
-	}
-	if status := can_take(p, pieces_a, field); status != 130 {
-		p.Append_Legal_Moves([3]uint16{field[0], field[1], status})
-	}
-}
-
 func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 
@@ -200,22 +147,14 @@ func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 
 	if p.Position[1] != last_y {
 		//einer move
-		if can_move(p, pieces_a, [2]uint16{p.Position[0], uint16(int16(p.Position[1]) + direction)}) {
-			p.Append_Legal_Moves([3]uint16{p.Position[0], uint16(int16(p.Position[1]) + direction), 64})
-		}
+		p.try_to_move(pieces_a, [2]uint16{p.Position[0], uint16(int16(p.Position[1]) + direction)}, 64)
 		//schlagen rechts
-		if status := can_take(p, pieces_a, [2]uint16{p.Position[0] + 1, uint16(int16(p.Position[1]) + direction)}); status != 130 {
-			p.Append_Legal_Moves([3]uint16{p.Position[0] + 1, uint16(int16(p.Position[1]) + direction), status})
-		}
+		p.try_to_take(pieces_a, [2]uint16{p.Position[0] + 1, uint16(int16(p.Position[1]) + direction)}, true)
 		//schlagen links
-		if status := can_take(p, pieces_a, [2]uint16{p.Position[0] - 1, uint16(int16(p.Position[1]) + direction)}); status != 130 {
-			p.Append_Legal_Moves([3]uint16{p.Position[0] - 1, uint16(int16(p.Position[1]) + direction), status})
-		}
+		p.try_to_take(pieces_a, [2]uint16{p.Position[0] - 1, uint16(int16(p.Position[1]) + direction)}, true)
 		//zweier move
 		if p.Position[1] != uint16(int16(last_y)-direction) && p.Has_moved == -1 {
-			if can_move(p, pieces_a, [2]uint16{p.Position[0], uint16(int16(p.Position[1]) + direction*2)}) {
-				p.Append_Legal_Moves([3]uint16{p.Position[0], uint16(int16(p.Position[1]) + direction*2), 65})
-			}
+			p.try_to_move(pieces_a, [2]uint16{p.Position[0], uint16(int16(p.Position[1]) + direction*2)}, 65)
 		}
 		//enpassant rechts
 		p.can_do_enpassant(pieces_a, [2]uint16{p.Position[0] + 1, uint16(int16(p.Position[1]) + direction)}, [2]uint16{p.Position[0] + 1, p.Position[1]}, moves_counter)
@@ -225,24 +164,39 @@ func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 }
 
 func (p *Knight) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
-	fmt.Printf("Moves of Knight")
+	p.Clear_Legal_Moves()
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 2, p.Give_Pos()[1] + 1})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 2, p.Give_Pos()[1] - 1})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 2, p.Give_Pos()[1] + 1})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 2, p.Give_Pos()[1] - 1})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1] + 2})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1] - 2})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1] + 2})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1] - 2})
+}
+
+func move_is_in_board(move [2]uint16) bool {
+	if move[0] <= 7 && move[1] <= 7 {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (p *Rook) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
-	fmt.Println("this is rook: ", p.Give_Pos())
 	p.Clear_Legal_Moves()
-	calc_moves_vertically_and_horizontally(p, pieces_a)
+	p.calc_moves_vertically_and_horizontally(pieces_a)
 }
 
 func (p *Bishop) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
-	calc_moves_diagonally(p, pieces_a)
+	p.calc_moves_diagonally(pieces_a)
 }
 
 func (p *Queen) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
-	calc_moves_vertically_and_horizontally(p, pieces_a)
-	calc_moves_diagonally(p, pieces_a)
+	p.calc_moves_vertically_and_horizontally(pieces_a)
+	p.calc_moves_diagonally(pieces_a)
 }
 
 func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
@@ -253,30 +207,14 @@ func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	var blocking_right_rochade bool
 	var blocking_left_rochade bool
 
-	if p.Give_Pos()[0] < 7 {
-		p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1]})
-		if p.Give_Pos()[1] < 7 {
-			p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1] + 1})
-		}
-		if p.Give_Pos()[1] > 0 {
-			p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1] - 1})
-		}
-	}
-	if p.Give_Pos()[0] > 0 {
-		p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1]})
-		if p.Give_Pos()[1] < 7 {
-			p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1] + 1})
-		}
-		if p.Give_Pos()[1] > 0 {
-			p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1] - 1})
-		}
-	}
-	if p.Give_Pos()[1] < 7 {
-		p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0], p.Give_Pos()[1] + 1})
-	}
-	if p.Give_Pos()[1] > 0 {
-		p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0], p.Give_Pos()[1] - 1})
-	}
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1]})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1] + 1})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1] - 1})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1]})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1] + 1})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1] - 1})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0], p.Give_Pos()[1] + 1})
+	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0], p.Give_Pos()[1] - 1})
 
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
