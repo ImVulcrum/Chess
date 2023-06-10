@@ -57,7 +57,7 @@ func (c *ChessObject) Move_To(new_position [2]uint16) {
 	c.Position = new_position
 }
 
-func (p *Pawn) can_take(pieces_a [64]Piece, field [2]uint16) {
+func can_take(p Piece, pieces_a [64]Piece, field [2]uint16) {
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
 			if pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == field {
@@ -68,7 +68,7 @@ func (p *Pawn) can_take(pieces_a [64]Piece, field [2]uint16) {
 	}
 }
 
-func (p *Pawn) can_move(pieces_a [64]Piece, field [2]uint16) {
+func can_move(p Piece, pieces_a [64]Piece, field [2]uint16) {
 	var blocking_piece bool
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
@@ -121,6 +121,91 @@ func check_if_piece_is_blocking(p Piece, pieces_a [64]Piece, current_pos [2]uint
 		fmt.Println("fatal: Error in Calculating Moves Method")
 	}
 	return var_break
+}
+
+func calc_moves_diagonally(p Piece, pieces_a [64]Piece) {
+	for new_x, new_y := p.Give_Pos()[0], p.Give_Pos()[1]; new_x < 7 && new_y < 7; {
+		new_x++
+		new_y++
+		var current_pos [2]uint16 = [2]uint16{new_x, new_y}
+
+		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
+			break
+		}
+	}
+
+	for new_x, new_y := p.Give_Pos()[0], p.Give_Pos()[1]; new_x < 7 && new_y != 0; {
+		new_x++
+		new_y--
+		var current_pos [2]uint16 = [2]uint16{new_x, new_y}
+
+		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
+			break
+		}
+	}
+
+	for new_x, new_y := p.Give_Pos()[0], p.Give_Pos()[1]; new_x != 0 && new_y < 7; {
+		new_x--
+		new_y++
+		var current_pos [2]uint16 = [2]uint16{new_x, new_y}
+
+		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
+			break
+		}
+	}
+
+	for new_x, new_y := p.Give_Pos()[0], p.Give_Pos()[1]; new_x != 0 && new_y != 0; {
+		new_x--
+		new_y--
+		var current_pos [2]uint16 = [2]uint16{new_x, new_y}
+
+		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
+			break
+		}
+	}
+}
+
+func calc_moves_vertically_and_horizontally(p Piece, pieces_a [64]Piece) {
+	for new_x := p.Give_Pos()[0]; new_x < 7; {
+		new_x++
+		var current_pos [2]uint16 = [2]uint16{new_x, p.Give_Pos()[1]}
+
+		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
+			break
+		}
+	}
+
+	for new_x := p.Give_Pos()[0]; new_x != 0; {
+		new_x--
+		var current_pos [2]uint16 = [2]uint16{new_x, p.Give_Pos()[1]}
+		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
+			break
+		}
+		if new_x == 0 {
+			break
+		}
+
+	}
+
+	for new_y := p.Give_Pos()[1]; new_y < 7; {
+		new_y++
+		var current_pos [2]uint16 = [2]uint16{p.Give_Pos()[0], new_y}
+		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
+			break
+		}
+	}
+
+	for new_y := p.Give_Pos()[1]; new_y != 0; {
+		new_y--
+		var current_pos [2]uint16 = [2]uint16{p.Give_Pos()[0], new_y}
+		if check_if_piece_is_blocking(p, pieces_a, current_pos) {
+			break
+		}
+		if new_y == 0 {
+			break
+		}
+
+	}
 }
 
 func Copy_Piece_To_Clipboard(piece Piece, w_x, w_y, a uint16) {
