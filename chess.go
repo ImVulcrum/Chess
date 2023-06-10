@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	gfx "gfxw"
 
 	"./pieces"
@@ -52,6 +53,7 @@ func main() {
 				var current_legal_moves [][3]uint16 = current_piece.Give_Legal_Moves()
 				var x_offset int16 = int16(current_piece.Give_Pos()[0]*a) - int16(m_x)
 				var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
+				var promotion uint16
 
 				gfx.UpdateAus()
 				draw_board(a)
@@ -91,7 +93,10 @@ func main() {
 						// highlight(a, new_field, 0, 0, 255)
 						for k := 0; k < len(current_legal_moves); k++ {
 							if new_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //es wurde eine Figur bewegt
-								pieces_a = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
+								pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
+								if promotion != 64 {
+									fmt.Println("Pawn Promotion")
+								}
 								white_is_current_player = change_player(white_is_current_player)
 								moves_counter++
 								break

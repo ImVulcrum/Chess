@@ -32,7 +32,8 @@ func Draw_To_Mouce(piece Piece, w_x, w_y, a, m_x, m_y uint16, x_offset, y_offset
 	Copy_Piece_To_Clipboard(piece, w_x, w_y, a)
 }
 
-func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece) [64]Piece { //rook and king has moved change
+func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece) ([64]Piece, uint16) { //rook and king has moved change
+	var promotion uint16 = 64
 
 	if king, ok := piece.(*King); ok {
 		if new_position[2] == 64 { //normal move
@@ -71,6 +72,15 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 		} else {
 			fmt.Println("panic: Error has occured, pawn move status is out of range")
 		}
+		if (new_position[1] == 0 && pawn.Is_White_Piece()) || new_position[1] == 7 && !pawn.Is_White_Piece() {
+			for i := 0; i < len(pieces_a); i++ {
+				if pieces_a[i] != nil {
+					if pieces_a[i] == pawn {
+						promotion = uint16(i)
+					}
+				}
+			}
+		}
 
 	} else {
 		if new_position[2] == 64 { //normal piece normal move
@@ -85,7 +95,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 
 	piece.Move_To([2]uint16{new_position[0], new_position[1]})
 
-	return pieces_a
+	return pieces_a, promotion
 }
 
 func (c *ChessObject) Give_Pos() [2]uint16 {
