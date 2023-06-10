@@ -1,7 +1,7 @@
 package main
 
 import (
-	. "gfxw"
+	gfx "gfxw"
 
 	"./pieces"
 )
@@ -28,7 +28,7 @@ func main() {
 
 	for { //gameloop
 
-		button, status, m_x, m_y := MausLesen1()
+		button, status, m_x, m_y := gfx.MausLesen1()
 
 		if status == 1 && button == 1 {
 			// UpdateAus()
@@ -49,58 +49,58 @@ func main() {
 
 			if current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player { //wenn die maus ein piece angeklickt hat, welches dem aktuellen spieler gehört
 				current_piece.Calc_Moves(pieces_a, moves_counter)
-				var current_legal_moves [][2]uint16 = current_piece.Give_Legal_Moves()
+				var current_legal_moves [][3]uint16 = current_piece.Give_Legal_Moves()
 				var x_offset int16 = int16(current_piece.Give_Pos()[0]*a) - int16(m_x)
 				var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
 
-				UpdateAus()
+				gfx.UpdateAus()
 				draw_board(a)
 				highlight(a, current_piece.Give_Pos(), 255, 50, 0)
 				// fmt.Println(current_legal_moves)
 				for k := 0; k < len(current_legal_moves); k++ {
-					highlight(a, current_legal_moves[k], 0, 255, 0)
+					highlight(a, [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]}, 0, 255, 0)
 				}
 				draw_pieces(pieces_a, w_x, w_y, a)
-				UpdateAn()
+				gfx.UpdateAn()
 
 				for {
-					button, status, m_x, m_y := MausLesen1()
+					button, status, m_x, m_y := gfx.MausLesen1()
 					if status != -1 && button == 1 {
-						UpdateAus()
+						gfx.UpdateAus()
 
-						Restaurieren(0, 0, w_x, w_y)
+						gfx.Restaurieren(0, 0, w_x, w_y)
 
-						Archivieren()
+						gfx.Archivieren()
 						pieces.Draw_To_Mouce(current_piece, w_x, w_y, a, m_x, m_y, x_offset, y_offset)
-						Restaurieren(0, 0, w_x, w_y)
+						gfx.Restaurieren(0, 0, w_x, w_y)
 
-						Archivieren()
+						gfx.Archivieren()
 
-						Transparenz(150)
-						Clipboard_einfuegenMitColorKey(uint16(int16(m_x)+x_offset), uint16(int16(m_y)+y_offset), 5, 5, 5)
-						Transparenz(0)
+						gfx.Transparenz(150)
+						gfx.Clipboard_einfuegenMitColorKey(uint16(int16(m_x)+x_offset), uint16(int16(m_y)+y_offset), 5, 5, 5)
+						gfx.Transparenz(0)
 
-						UpdateAn()
+						gfx.UpdateAn()
 					} else {
 						new_field := calc_field(a, uint16(int16(m_x)+x_offset+int16(a)/2), uint16(int16(m_y)+y_offset+int16(a)/2))
 
 						if new_field == current_piece.Give_Pos() {
-							Restaurieren(0, 0, w_x, w_y)
+							gfx.Restaurieren(0, 0, w_x, w_y)
 							break
 						}
 						// highlight(a, new_field, 0, 0, 255)
 						for k := 0; k < len(current_legal_moves); k++ {
-							if new_field == current_legal_moves[k] { //es wurde eine Figur bewegt
-								pieces_a, _ = pieces.Move_Piece_To(current_piece, new_field, moves_counter, pieces_a)
+							if new_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //es wurde eine Figur bewegt
+								pieces_a = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
 								white_is_current_player = change_player(white_is_current_player)
 								moves_counter++
 								break
 							}
 						}
-						UpdateAus()
+						gfx.UpdateAus()
 						draw_board(a)
 						draw_pieces(pieces_a, w_x, w_y, a)
-						UpdateAn()
+						gfx.UpdateAn()
 						break
 					}
 				}
@@ -119,10 +119,10 @@ func change_player(white_is_current_player bool) bool {
 }
 
 func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
-	Fenster(w_x, w_y)
-	Fenstertitel("Chess")
-	Stiftfarbe(0, 255, 0)
-	Vollrechteck(0, 0, w_x, w_y)
+	gfx.Fenster(w_x, w_y)
+	gfx.Fenstertitel("Chess")
+	gfx.Stiftfarbe(0, 255, 0)
+	gfx.Vollrechteck(0, 0, w_x, w_y)
 	draw_board(a)
 
 	var pieces_a [64]pieces.Piece
@@ -170,14 +170,14 @@ func calc_a(w_x, w_y uint16) uint16 {
 func draw_pieces(pieces_a [64]pieces.Piece, w_x, w_y, a uint16) {
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
-			Archivieren()
+			gfx.Archivieren()
 			pieces.Draw(pieces_a[i], w_x, w_y, a)
-			Restaurieren(0, 0, w_x, w_y)
+			gfx.Restaurieren(0, 0, w_x, w_y)
 
-			Clipboard_einfuegenMitColorKey(pieces_a[i].Give_Pos()[0]*a, pieces_a[i].Give_Pos()[1]*a, 5, 5, 5)
+			gfx.Clipboard_einfuegenMitColorKey(pieces_a[i].Give_Pos()[0]*a, pieces_a[i].Give_Pos()[1]*a, 5, 5, 5)
 		}
 	}
-	Archivieren()
+	gfx.Archivieren()
 }
 
 func highlight(a uint16, pos [2]uint16, r, g, b uint8) {
@@ -185,10 +185,10 @@ func highlight(a uint16, pos [2]uint16, r, g, b uint8) {
 	var cord_x uint16 = a * pos[0]
 	var cord_y uint16 = a * pos[1]
 
-	Transparenz(170)
-	Stiftfarbe(r, g, b)
-	Vollrechteck(cord_x, cord_y, a, a)
-	Transparenz(0)
+	gfx.Transparenz(170)
+	gfx.Stiftfarbe(r, g, b)
+	gfx.Vollrechteck(cord_x, cord_y, a, a)
+	gfx.Transparenz(0)
 }
 
 func draw_board(a uint16) {
@@ -198,20 +198,20 @@ func draw_board(a uint16) {
 		for k := 0; k <= 7; k++ {
 			if k%2 == 0 {
 				if i%2 == 0 {
-					Stiftfarbe(240, 217, 181)
+					gfx.Stiftfarbe(240, 217, 181)
 				} else {
-					Stiftfarbe(181, 136, 99)
+					gfx.Stiftfarbe(181, 136, 99)
 				}
 
 			} else {
 				if i%2 == 1 {
-					Stiftfarbe(240, 217, 181)
+					gfx.Stiftfarbe(240, 217, 181)
 				} else {
-					Stiftfarbe(181, 136, 99)
+					gfx.Stiftfarbe(181, 136, 99)
 				}
 			}
 
-			Vollrechteck(f_x, f_y, a, a)
+			gfx.Vollrechteck(f_x, f_y, a, a)
 			f_x = f_x + a
 		}
 		f_x = 0
