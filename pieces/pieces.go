@@ -248,6 +248,11 @@ func (p *Queen) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 
+	var right_rochade_possible uint16 = 64
+	var left_rochade_possible uint16 = 64
+	var blocking_right_rochade bool
+	var blocking_left_rochade bool
+
 	if p.Give_Pos()[0] < 7 {
 		p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1]})
 		if p.Give_Pos()[1] < 7 {
@@ -273,14 +278,6 @@ func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 		p.calc_normal_move(pieces_a, [2]uint16{p.Give_Pos()[0], p.Give_Pos()[1] - 1})
 	}
 
-	p.Calc_Castle_Moves(pieces_a)
-}
-
-func (p *King) Calc_Castle_Moves(pieces_a [64]Piece) {
-	var right_rochade_possible uint16 = 64
-	var left_rochade_possible uint16 = 64
-	var blocking_right_rochade bool
-	var blocking_left_rochade bool
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
 			if Rook, ok := pieces_a[i].(*Rook); ok {

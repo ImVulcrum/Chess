@@ -146,14 +146,14 @@ func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
 
 	pieces_a[24] = pieces.NewRook(0, 7, true)
 	// pieces_a[25] = pieces.NewKnight(1, 7, true)
-	//pieces_a[26] = pieces.NewBishop(2, 7, true)
+	// pieces_a[26] = pieces.NewBishop(2, 7, true)
 	// pieces_a[27] = pieces.NewQueen(3, 7, true)
 	pieces_a[28] = pieces.NewKing(4, 7, true)
 	// pieces_a[29] = pieces.NewBishop(5, 7, true)
 	// pieces_a[30] = pieces.NewKnight(6, 7, true)
 	pieces_a[31] = pieces.NewRook(7, 7, true)
 
-	pieces_a[32] = pieces.NewKing(3, 3, true)
+	// pieces_a[32] = pieces.NewKing(3, 3, true)
 	return pieces_a
 }
 
