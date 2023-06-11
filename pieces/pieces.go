@@ -2,6 +2,7 @@ package pieces
 
 import (
 	"fmt"
+	gfx "gfxw"
 )
 
 func (c *ChessObject) Give_Legal_Moves() [][3]uint16 {
@@ -28,8 +29,27 @@ func Draw(piece Piece, w_x, w_y, a uint16) {
 	Copy_Piece_To_Clipboard(piece, w_x, w_y, a)
 }
 
-func Draw_To_Mouce(piece Piece, w_x, w_y, a, m_x, m_y uint16, x_offset, y_offset int16) {
+func Draw_To_Point(piece Piece, w_x, w_y, a, x, y uint16, x_offset, y_offset int16, transparencey uint8) {
+
+	if transparencey == 0 {
+		gfx.Archivieren()
+	}
+
+	gfx.UpdateAus()
+
+	gfx.Restaurieren(0, 0, w_x, w_y)
+
+	gfx.Archivieren()
 	Copy_Piece_To_Clipboard(piece, w_x, w_y, a)
+	gfx.Restaurieren(0, 0, w_x, w_y)
+
+	gfx.Archivieren()
+
+	gfx.Transparenz(transparencey)
+	gfx.Clipboard_einfuegenMitColorKey(uint16(int16(x)+x_offset), uint16(int16(y)+y_offset), 5, 5, 5)
+	gfx.Transparenz(0)
+
+	gfx.UpdateAn()
 }
 
 func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece) ([64]Piece, uint16) { //rook and king has moved change

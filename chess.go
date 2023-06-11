@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	gfx "gfxw"
 
 	"./pieces"
@@ -9,6 +8,7 @@ import (
 
 func main() {
 	var w_x, w_y uint16 = 904, 904
+	// var w_x, w_y uint16 = 800, 800
 	var a uint16 = calc_a(w_x, w_y)
 	var white_is_current_player bool = true
 
@@ -32,17 +32,14 @@ func main() {
 		button, status, m_x, m_y := gfx.MausLesen1()
 
 		if status == 1 && button == 1 {
-			// UpdateAus()
-			// draw_board(a)
-			// draw_pieces(pieces_a, w_x, w_y, a)
-			// UpdateAn()
-			var current_field [2]uint16 = calc_field(a, m_x, m_y)
+			var current_field [2]uint16 = calc_field(a, m_x, m_y, 0)
 			var current_piece pieces.Piece
+			var piece_index int
 
-			for i := 0; i < len(pieces_a); i++ {
-				if pieces_a[i] != nil {
-					if current_field == pieces_a[i].Give_Pos() {
-						current_piece = pieces_a[i]
+			for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
+				if pieces_a[piece_index] != nil {
+					if current_field == pieces_a[piece_index].Give_Pos() {
+						current_piece = pieces_a[piece_index]
 						break
 					}
 				}
@@ -55,63 +52,93 @@ func main() {
 				var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
 				var promotion uint16
 
-				gfx.UpdateAus()
-				draw_board(a)
-				highlight(a, current_piece.Give_Pos(), 255, 50, 0)
-				// fmt.Println(current_legal_moves)
-				for k := 0; k < len(current_legal_moves); k++ {
-					highlight(a, [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]}, 0, 255, 0)
-				}
-				draw_pieces(pieces_a, w_x, w_y, a)
-				gfx.UpdateAn()
+				Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true)
 
 				for {
-					button, status, m_x, m_y := gfx.MausLesen1()
+					button, status, m_x, m_y := gfx.MausLesen1() //hält solange an, bis die maus bewegt wurde
 					if status != -1 && button == 1 {
-						gfx.UpdateAus()
+						//schwebenedes piece wenn taste gehalten wird
+						pieces.Draw_To_Point(current_piece, w_x, w_y, a, m_x, m_y, x_offset, y_offset, 50)
 
-						gfx.Restaurieren(0, 0, w_x, w_y)
+					} else { //wenn taste losgelassen wird
+						new_field := calc_field(a, uint16(int16(m_x)+x_offset+int16(a)/2), uint16(int16(m_y)+y_offset+int16(a)/2), 0)
 
-						gfx.Archivieren()
-						pieces.Draw_To_Mouce(current_piece, w_x, w_y, a, m_x, m_y, x_offset, y_offset)
-						gfx.Restaurieren(0, 0, w_x, w_y)
-
-						gfx.Archivieren()
-
-						gfx.Transparenz(150)
-						gfx.Clipboard_einfuegenMitColorKey(uint16(int16(m_x)+x_offset), uint16(int16(m_y)+y_offset), 5, 5, 5)
-						gfx.Transparenz(0)
-
-						gfx.UpdateAn()
-					} else {
-						new_field := calc_field(a, uint16(int16(m_x)+x_offset+int16(a)/2), uint16(int16(m_y)+y_offset+int16(a)/2))
-
-						if new_field == current_piece.Give_Pos() {
+						if new_field == current_piece.Give_Pos() { //wenn taste über dem gleichen feld losgelassen wird wie die Figur steht
 							gfx.Restaurieren(0, 0, w_x, w_y)
 							break
 						}
-						// highlight(a, new_field, 0, 0, 255)
+						//überprüfen ob das Feld über dem die Maus losgelassen wurde in den Legal Moves des angeklickten Pieces enthalten ist
 						for k := 0; k < len(current_legal_moves); k++ {
-							if new_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //es wurde eine Figur bewegt
+							if new_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //wenn das der Fall ist, wird das Piece bewegt
 								pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
 								if promotion != 64 {
-									fmt.Println("Pawn Promotion")
+									Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false)
+									pieces_a = Pawm_Promotion(w_x, w_y, a, piece_index, pieces_a)
 								}
 								white_is_current_player = change_player(white_is_current_player)
 								moves_counter++
 								break
 							}
 						}
-						gfx.UpdateAus()
-						draw_board(a)
-						draw_pieces(pieces_a, w_x, w_y, a)
-						gfx.UpdateAn()
+						//entweder wurde ein piece bewegt oder die maus wurde auf einem Feld losgelassen, welches nicht in Legal_Moves enthalten ist
+						//in jedem Fall wird das Feld neugezeichnet
+						Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false)
 						break
 					}
 				}
 			}
 		}
 	}
+}
+
+func Pawm_Promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece) [64]pieces.Piece {
+	var queen pieces.Piece = pieces.NewQueen(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
+	var knight pieces.Piece = pieces.NewKnight(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
+	var rook pieces.Piece = pieces.NewRook(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
+	var bishop pieces.Piece = pieces.NewBishop(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
+
+	gfx.Stiftfarbe(0, 0, 0)
+	gfx.Transparenz(70)
+	gfx.Vollrechteck(0, 0, a*8, a*8)
+	gfx.Transparenz(0)
+	gfx.Stiftfarbe(221, 221, 221)
+	gfx.Vollrechteck((2 * a), (4*a)-(5*a)/10, 4*a, a)
+
+	pieces.Draw_To_Point(queen, w_x, w_y, a, (2 * a), (4*a)-(5*a)/10, 0, 0, 0)
+	pieces.Draw_To_Point(knight, w_x, w_y, a, (3 * a), (4*a)-(5*a)/10, 0, 0, 0)
+	pieces.Draw_To_Point(rook, w_x, w_y, a, (4 * a), (4*a)-(5*a)/10, 0, 0, 0)
+	pieces.Draw_To_Point(bishop, w_x, w_y, a, (5 * a), (4*a)-(5*a)/10, 0, 0, 0)
+	for {
+		button, status, m_x, m_y := gfx.MausLesen1()
+		if button == 1 && status == 1 && m_x >= 2*a && m_x <= 6*a && m_y >= (4*a)-(5*a)/10 && m_y <= (4*a)+(5*a)/10 {
+			x_field_pos := (calc_field(a, m_x, m_y, (5*a)/10))[0]
+			if x_field_pos == 2 {
+				pieces_a[pawn_index] = queen
+			} else if x_field_pos == 3 {
+				pieces_a[pawn_index] = knight
+			} else if x_field_pos == 4 {
+				pieces_a[pawn_index] = rook
+			} else if x_field_pos == 5 {
+				pieces_a[pawn_index] = bishop
+			}
+			break
+		}
+
+	}
+	return pieces_a
+}
+
+func Draw_Board(a, w_x, w_y uint16, current_piece pieces.Piece, current_legal_moves [][3]uint16, pieces_a [64]pieces.Piece, highlighting_is_activated bool) {
+	gfx.UpdateAus()
+	draw_background(a)
+	if highlighting_is_activated {
+		highlight(a, current_piece.Give_Pos(), 255, 50, 0)
+		for k := 0; k < len(current_legal_moves); k++ {
+			highlight(a, [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]}, 0, 255, 0)
+		}
+	}
+	draw_pieces(pieces_a, w_x, w_y, a)
+	gfx.UpdateAn()
 }
 
 func change_player(white_is_current_player bool) bool {
@@ -126,9 +153,9 @@ func change_player(white_is_current_player bool) bool {
 func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
 	gfx.Fenster(w_x, w_y)
 	gfx.Fenstertitel("Chess")
-	gfx.Stiftfarbe(0, 255, 0)
+	gfx.Stiftfarbe(221, 221, 221)
 	gfx.Vollrechteck(0, 0, w_x, w_y)
-	draw_board(a)
+	draw_background(a)
 
 	var pieces_a [64]pieces.Piece
 
@@ -157,6 +184,8 @@ func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
 	pieces_a[29] = pieces.NewBishop(5, 7, true)
 	pieces_a[30] = pieces.NewKnight(6, 7, true)
 	pieces_a[31] = pieces.NewRook(7, 7, true)
+
+	pieces_a[32] = pieces.NewPawn(4, 2, true)
 
 	return pieces_a
 }
@@ -195,7 +224,7 @@ func highlight(a uint16, pos [2]uint16, r, g, b uint8) {
 	gfx.Transparenz(0)
 }
 
-func draw_board(a uint16) {
+func draw_background(a uint16) {
 	var f_x uint16 = 0
 	var f_y uint16 = 0
 	for i := 0; i <= 7; i++ {
@@ -223,10 +252,10 @@ func draw_board(a uint16) {
 	}
 }
 
-func calc_field(a, m_x, m_y uint16) [2]uint16 {
+func calc_field(a, m_x, m_y, y_offset uint16) [2]uint16 {
 	var current_field [2]uint16
 
 	current_field[0] = m_x / a
-	current_field[1] = m_y / a
+	current_field[1] = (m_y + y_offset) / a
 	return current_field
 }
