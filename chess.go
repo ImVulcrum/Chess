@@ -1,14 +1,17 @@
 package main
 
 import (
+	"fmt"
+
 	gfx "./gfxw"
 	"./pieces"
 )
 
 func main() {
-	var w_x, w_y uint16 = 904, 904
-	// var w_x, w_y uint16 = 800, 800
+	// var w_x, w_y uint16 = 904, 904
+	var w_x, w_y uint16 = 800, 800
 	var a uint16 = calc_a(w_x, w_y)
+	fmt.Println(a)
 	var white_is_current_player bool = true
 
 	pieces_a := initialize(w_x, w_y, a)
