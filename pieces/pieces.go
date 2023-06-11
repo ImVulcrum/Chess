@@ -2,7 +2,8 @@ package pieces
 
 import (
 	"fmt"
-	gfx "gfxw"
+
+	gfx "../gfxw"
 )
 
 func (c *ChessObject) Give_Legal_Moves() [][3]uint16 {

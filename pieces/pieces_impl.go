@@ -2,7 +2,8 @@ package pieces
 
 import (
 	"fmt"
-	gfx "gfxw"
+
+	gfx "../gfxw"
 )
 
 type Piece interface {

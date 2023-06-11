@@ -1,7 +1,7 @@
 package main
 
 import (
-	gfx "gfxw"
+	gfx "./gfxw"
 
 	"./pieces"
 )

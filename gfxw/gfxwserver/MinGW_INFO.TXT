@@ -1,0 +1,14 @@
+Informationen für MinGW-Nutzer
+------------------------------
+
+Wenn Sie MinGW schon installiert haben und ihre MinGW-Installation
+nicht zerstören wollen, können Sie alternativ auch Folgendes tun:
+
+1.) Installieren Sie "SDL-devel-1.2.15-mingw32.tar.gz".
+
+2.) Installieren Sie "SDL_gfx-2.0.25.tar.gz".
+
+3.) Installieren Sie "SDL_ttf-devel-2.0.22-VC.zip"
+
+MfG
+St. Schmidt

@@ -1,0 +1,41 @@
+Wenn Sie unter Windows den gfx2server selbst kompilieren wollen, 
+sind folgende Schritte abzuarbeiten:
+ 
+1.) Installieren Sie "go1.1X.Y.window-386.msi" (Download von golang.org).
+    (Sollten Sie ein 'altes' Go installiert haben, deinstallieren Sie
+    dieses bitte vorher.)
+    HINWEIS: Unter Windows müssen Sie zwingend die 32-Bit-Variante von
+             Go installieren! (Endung: "386.msi" !)
+
+2.) Installieren Sie "geany"  (Download von geany.org), mindestens 
+    in der Version 1.25.
+
+3.) Installieren Sie "MinGW" indem Sie die Datei "LWB_MinGW.zip" nach
+    C:\ kopieren und von dort entpacken. Alle entpackten Dateien landen
+    dann im neuen Ordner "C:\MinGW\". (Dieser Schritt ist ab Go1.5
+    notwendig, da nun GCC benötigt wird, um die 'externe' Grafikbibliothek 
+    einbinden zu können.) Sollten Sie später einmal noch etwas in MinGW
+    nachinstallieren wollen, starten Sie dafür das Programm 'mingw-get.exe'
+    im Verzeichnis C:\MinGW\bin .
+    Die Datei "LWB_MinGW.zip" finden Sie im Netz unter 
+    'ftp://ftp.mi.fu-berlin.de/lwb'.
+    --->  Sollten Sie MinGW bei sich schon installiert haben, lesen Sie bitte
+          die Datei "MinGW_Info.TXT".
+
+4.) Ergänzen Sie die Windows-Umgebungsvariable %PATH% um den Eintrag:
+    'C:\MinGW\bin'.
+    (Systemsteuerung --> System und Sicherheit--> System --> Erweiterte Systemeinstellungen ---
+     ---> Umgebungsvariablen --> Systemvariablen 'Path' --> Bearbeiten:
+     Dort ergänzt man ganz am Ende ';C:\MinGW\Bin' (ohne Anführungszeichen).
+
+5.) Melden Sie sich von Windows ab und neu an.
+
+6.) Öffnen Sie in Geany die Datei 'C:\Go\src\gfx2\gfx2server\gfx2server.go und kompilieren
+    Sie die Datei.
+
+Viel Spaß wünscht
+
+Stefan Schmidt
+Lehrerweiterbildung Informatik
+an der FU Berlin
+26.04.2021
