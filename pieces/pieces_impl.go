@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	gfx "../gfxw"
+	"../path"
 )
 
 type Piece interface {
@@ -227,7 +228,8 @@ func (p *ChessObject) calc_moves_vertically_and_horizontally(pieces_a [64]Piece)
 }
 
 func Copy_Piece_To_Clipboard(piece Piece, w_x, w_y, a uint16) {
-	gfx.LadeBild(0, 0, "C:\\Users\\liamw\\Documents\\_Privat\\_Go\\Chess\\Pieces.bmp")
+	path := path.Give_Path()
+	gfx.LadeBild(0, 0, (path + "\\Pieces.bmp"))
 
 	switch piece.(type) {
 	case *Pawn:

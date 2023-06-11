@@ -7,10 +7,13 @@ import (
 	"os/exec"
 	"strconv"
 	"time"
+
+	"../path"
 )
 
 // var serververzeichnis string = os.Getenv("GOPATH")+"\\src\\gfxw\\gfxwserver\\"
-var serververzeichnis string = "C:\\Users\\liamw\\Documents\\_Privat\\_Go\\Chess\\gfxw\\gfxwserver\\"
+var path_to_server string = path.Give_Path()
+var serververzeichnis string = (path_to_server + "\\gfxw\\gfxwserver\\")
 
 // const serververzeichnis string = "/home/lewein/go/bin/"
 
