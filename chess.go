@@ -2,33 +2,25 @@ package main
 
 import (
 	"fmt"
-	"./imaging"
 	"image"
 	"os"
+
 	gfx "./gfxw"
+	"./imaging"
 	"./pieces"
 )
 
 func main() {
-	var w_x, w_y uint16 = 800, 800
+	var w_x, w_y uint16 = 1000, 1000
 	var a uint16 = calc_a(w_x, w_y)
 	var white_is_current_player bool = true
 	fmt.Println("start game")
 
 	pieces_a := initialize(w_x, w_y, a)
-	
+
 	rescale_image(a)
 
 	var moves_counter int16 = 1
-
-	// fmt.Println(pieces[0].Give_Pos())
-
-	// pieces[0].Move_To([2]uint16{3, 4})
-
-	// fmt.Println(pieces[0].Give_Pos())
-
-	// legal := pieces[1].Give_Legal_Moves()
-	// fmt.Println(legal[0].Position[1])
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
@@ -255,7 +247,7 @@ func draw_background(a uint16) {
 	}
 }
 
-func rescale_image (a uint16) {
+func rescale_image(a uint16) {
 
 	// Open the BMP file
 	file, err := os.Open("Pieces_Source.bmp")
@@ -273,8 +265,8 @@ func rescale_image (a uint16) {
 	}
 
 	// Specify the desired width and height
-	var width int = 6*int(a)
-	var height int = 2*int(a)
+	var width int = 6 * int(a)
+	var height int = 2 * int(a)
 
 	// Resize the image to the specified dimensions
 	resizedImg := imaging.Resize(img, width, height, imaging.NearestNeighbor)
@@ -286,7 +278,6 @@ func rescale_image (a uint16) {
 		return
 	}
 }
-
 
 func calc_field(a, m_x, m_y, y_offset uint16) [2]uint16 {
 	var current_field [2]uint16
