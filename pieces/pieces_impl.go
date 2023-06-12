@@ -229,13 +229,14 @@ func (p *ChessObject) calc_moves_vertically_and_horizontally(pieces_a [64]Piece)
 
 func Copy_Piece_To_Clipboard(piece Piece, w_x, w_y, a uint16) {
 	path := path.Give_Path()
-	if a == 113 {
-		gfx.LadeBild(0, 0, (path + "\\Pieces113.bmp"))
-	} else if a == 100 {
-		gfx.LadeBild(0, 0, (path + "\\Pieces100.bmp"))
-	} else {
-		fmt.Println("panic: Error, there is no matching pieces image for specified height and widht")
-	}
+	gfx.LadeBild(0, 0, (path + "\\Pieces.bmp"))
+	//if a == 113 {
+		//gfx.LadeBild(0, 0, (path + "\\Pieces113.bmp"))
+	//} else if a == 100 {
+		//gfx.LadeBild(0, 0, (path + "\\Pieces100.bmp"))
+	//} else {
+		//fmt.Println("panic: Error, there is no matching pieces image for specified height and widht")
+	//}
 
 	switch piece.(type) {
 	case *Pawn:

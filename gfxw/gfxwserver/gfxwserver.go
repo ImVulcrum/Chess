@@ -2166,11 +2166,11 @@ func main () {
 	// Nun wird nebenläufig der Gfx-Server gestartet!
 	breite,err := strconv.Atoi(os.Args[1])
 	if err != nil {breite = 640}
-	if breite < 1 || breite > 1920 { breite = 1920 }
+	if breite < 1 || breite > 4000 { breite = 1920 }
 	b = uint16(breite)
 	hoehe,err:= strconv.Atoi(os.Args[2])
 	if err != nil {hoehe = 480}
-	if hoehe < 1 || hoehe > 1200 { hoehe = 1200 }
+	if hoehe < 1 || hoehe > 4000 { hoehe = 1200 }
 	h = uint16(hoehe)
 	portnummer,err:= strconv.Atoi(os.Args[3])
 	if err != nil {portnummer = 55555}

@@ -2,19 +2,22 @@ package main
 
 import (
 	"fmt"
-
+	"./imaging"
+	"image"
+	"os"
 	gfx "./gfxw"
 	"./pieces"
 )
 
 func main() {
-	// var w_x, w_y uint16 = 904, 904
 	var w_x, w_y uint16 = 800, 800
 	var a uint16 = calc_a(w_x, w_y)
-	fmt.Println(a)
 	var white_is_current_player bool = true
+	fmt.Println("start game")
 
 	pieces_a := initialize(w_x, w_y, a)
+	
+	rescale_image(a)
 
 	var moves_counter int16 = 1
 
@@ -187,8 +190,6 @@ func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
 	pieces_a[30] = pieces.NewKnight(6, 7, true)
 	pieces_a[31] = pieces.NewRook(7, 7, true)
 
-	pieces_a[32] = pieces.NewPawn(4, 2, true)
-
 	return pieces_a
 }
 
@@ -253,6 +254,39 @@ func draw_background(a uint16) {
 		f_y = f_y + a
 	}
 }
+
+func rescale_image (a uint16) {
+
+	// Open the BMP file
+	file, err := os.Open("Pieces_Source.bmp")
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+
+	// Decode the BMP file
+	img, _, err := image.Decode(file)
+	if err != nil {
+		fmt.Println("Error decoding file:", err)
+		return
+	}
+
+	// Specify the desired width and height
+	var width int = 6*int(a)
+	var height int = 2*int(a)
+
+	// Resize the image to the specified dimensions
+	resizedImg := imaging.Resize(img, width, height, imaging.NearestNeighbor)
+
+	// Save the resized image to a new BMP file
+	err = imaging.Save(resizedImg, "Pieces.bmp")
+	if err != nil {
+		fmt.Println("Error saving file:", err)
+		return
+	}
+}
+
 
 func calc_field(a, m_x, m_y, y_offset uint16) [2]uint16 {
 	var current_field [2]uint16
