@@ -52,7 +52,7 @@ func main() {
 				Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true)
 
 				for {
-					button, status, m_x, m_y := gfx.MausLesen1() //hält solange an, bis die maus bewegt wurde
+					button, status, m_x, m_y := gfx.MausLesen1() //hält so lange an, bis die maus bewegt wurde
 					if status != -1 && button == 1 {
 						//schwebenedes piece wenn taste gehalten wird
 						pieces.Draw_To_Point(current_piece, w_x, w_y, a, m_x, m_y, x_offset, y_offset, 50)
