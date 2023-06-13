@@ -57,8 +57,9 @@ func Draw_To_Point(piece Piece, w_x, w_y, a, x, y uint16, x_offset, y_offset int
 	gfx.UpdateAn()
 }
 
-func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece) ([64]Piece, uint16) { //rook and king has moved change
+func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece, reset bool) ([64]Piece, uint16) { //rook and king has moved change
 	var promotion uint16 = 64
+	var Has_moved int16 = piece.Give_Has_Moved()
 
 	if king, ok := piece.(*King); ok {
 		if new_position[2] == 64 { //normal move
@@ -85,7 +86,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 
 	} else if pawn, ok := piece.(*Pawn); ok {
 		if new_position[2] == 65 { //double_move
-			fmt.Println("moves_counter")
+			// fmt.Println("moves_counter")
 			pawn.Has_moved = moves_counter
 		} else if new_position[2] <= 63 { //en passant
 			pieces_a[new_position[2]] = nil
@@ -117,6 +118,10 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 		} else {
 			fmt.Println("panic: Error has occured, normal piece move status is out of range")
 		}
+	}
+
+	if reset {
+		piece.Set_Has_Moved(Has_moved)
 	}
 
 	piece.Move_To([2]uint16{new_position[0], new_position[1]})
@@ -251,11 +256,6 @@ func (p *Queen) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.calc_moves_diagonally(pieces_a)
 }
 
-// func (p *King) Is_In_Check(pieces_a [64]Piece) {
-// 	var field [2]uint16 = p.Give_Pos()
-// 	Field_Can_Be_Captured(!p.Is_White_Piece(), field, pieces_a)
-// }
-
 func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 
@@ -301,6 +301,16 @@ func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	}
 }
 
+func (p *King) Is_In_Check(pieces_a [64]Piece, moves_counter int16) bool {
+	var field [2]uint16 = p.Give_Pos()
+
+	if Field_Can_Be_Captured(!p.Is_White_Piece(), field, pieces_a, moves_counter) {
+		return true
+	} else {
+		return false
+	}
+}
+
 func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king_index int) ([64]Piece, bool) {
 
 	var current_legal_moves [][3]uint16
@@ -308,11 +318,7 @@ func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king
 	var checkmate bool = true
 	var temp_pieces_a [64]Piece = pieces_a
 
-	fmt.Println("king is in check = ", Field_Can_Be_Captured(!pieces_a[current_king_index].Is_White_Piece(), pieces_a[current_king_index].Give_Pos(), pieces_a, moves_counter))
-
 	for i := 0; i < len(pieces_a); i++ {
-
-		// fmt.Println("after", pieces_a[31].Give_Has_Moved())
 		if pieces_a[i] != nil && pieces_a[i].Is_White_Piece() == pieces_a[current_king_index].Is_White_Piece() {
 
 			current_field = pieces_a[i].Give_Pos()
@@ -321,20 +327,20 @@ func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king
 
 			current_legal_moves = pieces_a[i].Give_Legal_Moves()
 			pieces_a[i].Clear_Legal_Moves()
-			// fmt.Println("beforeee", pieces_a[16].Give_Has_Moved())
 			for k := 0; k < len(current_legal_moves); k++ {
-				// fmt.Println(current_legal_moves)
-				fmt.Println("before", pieces_a[16].Give_Has_Moved())
-				temp_pieces_a, _ = Move_Piece_To(temp_pieces_a[i], current_legal_moves[k], moves_counter, pieces_a)
-				fmt.Println("after", pieces_a[16].Give_Has_Moved())
-				if !Field_Can_Be_Captured(!pieces_a[current_king_index].Is_White_Piece(), pieces_a[current_king_index].Give_Pos(), temp_pieces_a, moves_counter) {
 
+				temp_pieces_a, _ = Move_Piece_To(temp_pieces_a[i], current_legal_moves[k], moves_counter, pieces_a, true)
+
+				if !pieces_a[current_king_index].(*King).Is_In_Check(temp_pieces_a, moves_counter) {
+					// if !Field_Can_Be_Captured(!pieces_a[current_king_index].Is_White_Piece(), pieces_a[current_king_index].Give_Pos(), temp_pieces_a, moves_counter) {
 					pieces_a[i].Append_Legal_Moves(current_legal_moves[k])
 					checkmate = false
 				}
-			}
 
+			}
+			fmt.Println("before: ", pieces_a[24].Give_Pos())
 			pieces_a[i].Move_To(current_field)
+			fmt.Println("after: ", pieces_a[24].Give_Pos())
 		}
 	}
 	return pieces_a, checkmate

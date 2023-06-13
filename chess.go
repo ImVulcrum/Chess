@@ -18,8 +18,13 @@ func main() {
 	fmt.Println("start game")
 	var current_king_index int
 	pieces_a, white_king_index, black_king_index := initialize(w_x, w_y, a)
-
+	var checkmate bool
+	var check bool
+	var current_piece pieces.Piece
+	var piece_index int
+	var current_legal_moves [][3]uint16
 	var moves_counter int16
+	var current_field [2]uint16
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
@@ -29,21 +34,23 @@ func main() {
 
 			player_change = false
 			white_is_current_player, current_king_index = change_player(white_is_current_player, white_king_index, black_king_index)
-			fmt.Println(pieces_a[current_king_index].Is_White_Piece())
 			moves_counter++
-			fmt.Println(current_king_index)
+			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)
 
-			pieces_a, _ = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)
+			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)
+			Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+			fmt.Println("---")
+			if checkmate {
+				fmt.Println("checkmate")
+				gfx.TastaturLesen1()
+			}
 
 		}
 
 		button, status, m_x, m_y := gfx.MausLesen1()
 
 		if status == 1 && button == 1 {
-			var current_field [2]uint16 = calc_field(a, m_x, m_y, 0)
-			var current_piece pieces.Piece
-			var piece_index int
-			var current_legal_moves [][3]uint16
+			current_field = calc_field(a, m_x, m_y, 0)
 
 			for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
 				if pieces_a[piece_index] != nil {
@@ -57,13 +64,12 @@ func main() {
 			if current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player { //wenn die maus ein piece angeklickt hat, welches dem aktuellen spieler gehört
 				//current_piece.Calc_Moves(pieces_a, moves_counter)
 				current_legal_moves = current_piece.Give_Legal_Moves()
-				fmt.Println(current_piece.Give_Has_Moved())
 
 				var x_offset int16 = int16(current_piece.Give_Pos()[0]*a) - int16(m_x)
 				var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
-				var promotion uint16
+				var promotion uint16 = 0
 
-				Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true)
+				Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
 
 				for {
 					button, status, m_x, m_y := gfx.MausLesen1() //hält so lange an, bis die maus bewegt wurde
@@ -81,18 +87,20 @@ func main() {
 						//überprüfen ob das Feld über dem die Maus losgelassen wurde in den Legal Moves des angeklickten Pieces enthalten ist
 						for k := 0; k < len(current_legal_moves); k++ {
 							if new_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //wenn das der Fall ist, wird das Piece bewegt
-								pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
+
+								pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a, false)
 								if promotion != 64 {
-									Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false)
+									Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 									pieces_a = Pawm_Promotion(w_x, w_y, a, piece_index, pieces_a)
 								}
+
 								player_change = true
 								break
 							}
 						}
 						//entweder wurde ein piece bewegt oder die maus wurde auf einem Feld losgelassen, welches nicht in Legal_Moves enthalten ist
 						//in jedem Fall wird das Feld neugezeichnet
-						Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false)
+						Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 						break
 					}
 				}
@@ -138,11 +146,14 @@ func Pawm_Promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piec
 	return pieces_a
 }
 
-func Draw_Board(a, w_x, w_y uint16, current_piece pieces.Piece, current_legal_moves [][3]uint16, pieces_a [64]pieces.Piece, highlighting_is_activated bool) {
+func Draw_Board(a, w_x, w_y uint16, current_piece pieces.Piece, current_legal_moves [][3]uint16, pieces_a [64]pieces.Piece, highlighting_is_activated bool, current_king_index int, check bool) {
 	gfx.UpdateAus()
 	draw_background(a)
+	if check {
+		highlight(a, pieces_a[current_king_index].Give_Pos(), 255, 0, 0)
+	}
 	if highlighting_is_activated {
-		highlight(a, current_piece.Give_Pos(), 255, 50, 0)
+		highlight(a, current_piece.Give_Pos(), 0, 50, 255)
 		for k := 0; k < len(current_legal_moves); k++ {
 			highlight(a, [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]}, 0, 255, 0)
 		}
