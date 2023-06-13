@@ -10,6 +10,10 @@ func (c *ChessObject) Give_Legal_Moves() [][3]uint16 {
 	return c.Legal_Moves
 }
 
+func (c *ChessObject) Give_Has_Moved() int16 {
+	return c.Has_moved
+}
+
 func (c *ChessObject) Set_Has_Moved(update int16) {
 	c.Has_moved = update
 }
@@ -81,6 +85,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 
 	} else if pawn, ok := piece.(*Pawn); ok {
 		if new_position[2] == 65 { //double_move
+			fmt.Println("moves_counter")
 			pawn.Has_moved = moves_counter
 		} else if new_position[2] <= 63 { //en passant
 			pieces_a[new_position[2]] = nil
@@ -194,6 +199,30 @@ func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	}
 }
 
+func move_is_in_board(move [2]uint16) bool {
+	if move[0] <= 7 && move[1] <= 7 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func Field_Can_Be_Captured(pieces_that_can_capture_are_white bool, field [2]uint16, pieces_a [64]Piece, moves_counter int16) bool {
+	for i := 0; i < len(pieces_a); i++ {
+		if pieces_a[i] != nil && pieces_a[i].Is_White_Piece() == pieces_that_can_capture_are_white {
+			pieces_a[i].Calc_Moves(pieces_a, moves_counter)
+			current_legal_moves := pieces_a[i].Give_Legal_Moves()
+			for k := 0; k < len(current_legal_moves); k++ {
+				legal_move := [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]}
+				if legal_move == field {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (p *Knight) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 2, p.Give_Pos()[1] + 1})
@@ -204,14 +233,6 @@ func (p *Knight) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 1, p.Give_Pos()[1] - 2})
 	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1] + 2})
 	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1] - 2})
-}
-
-func move_is_in_board(move [2]uint16) bool {
-	if move[0] <= 7 && move[1] <= 7 {
-		return true
-	} else {
-		return false
-	}
 }
 
 func (p *Rook) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
@@ -229,6 +250,11 @@ func (p *Queen) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.calc_moves_vertically_and_horizontally(pieces_a)
 	p.calc_moves_diagonally(pieces_a)
 }
+
+// func (p *King) Is_In_Check(pieces_a [64]Piece) {
+// 	var field [2]uint16 = p.Give_Pos()
+// 	Field_Can_Be_Captured(!p.Is_White_Piece(), field, pieces_a)
+// }
 
 func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
@@ -273,4 +299,43 @@ func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	if !blocking_left_rochade && left_rochade_possible != 64 {
 		p.Append_Legal_Moves([3]uint16{0, p.Give_Pos()[1], uint16(left_rochade_possible)})
 	}
+}
+
+func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king_index int) ([64]Piece, bool) {
+
+	var current_legal_moves [][3]uint16
+	var current_field [2]uint16
+	var checkmate bool = true
+	var temp_pieces_a [64]Piece = pieces_a
+
+	fmt.Println("king is in check = ", Field_Can_Be_Captured(!pieces_a[current_king_index].Is_White_Piece(), pieces_a[current_king_index].Give_Pos(), pieces_a, moves_counter))
+
+	for i := 0; i < len(pieces_a); i++ {
+
+		// fmt.Println("after", pieces_a[31].Give_Has_Moved())
+		if pieces_a[i] != nil && pieces_a[i].Is_White_Piece() == pieces_a[current_king_index].Is_White_Piece() {
+
+			current_field = pieces_a[i].Give_Pos()
+
+			pieces_a[i].Calc_Moves(pieces_a, moves_counter)
+
+			current_legal_moves = pieces_a[i].Give_Legal_Moves()
+			pieces_a[i].Clear_Legal_Moves()
+			// fmt.Println("beforeee", pieces_a[16].Give_Has_Moved())
+			for k := 0; k < len(current_legal_moves); k++ {
+				// fmt.Println(current_legal_moves)
+				fmt.Println("before", pieces_a[16].Give_Has_Moved())
+				temp_pieces_a, _ = Move_Piece_To(temp_pieces_a[i], current_legal_moves[k], moves_counter, pieces_a)
+				fmt.Println("after", pieces_a[16].Give_Has_Moved())
+				if !Field_Can_Be_Captured(!pieces_a[current_king_index].Is_White_Piece(), pieces_a[current_king_index].Give_Pos(), temp_pieces_a, moves_counter) {
+
+					pieces_a[i].Append_Legal_Moves(current_legal_moves[k])
+					checkmate = false
+				}
+			}
+
+			pieces_a[i].Move_To(current_field)
+		}
+	}
+	return pieces_a, checkmate
 }

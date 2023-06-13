@@ -13,18 +13,29 @@ import (
 func main() {
 	var w_x, w_y uint16 = 1000, 1000
 	var a uint16 = calc_a(w_x, w_y)
-	var white_is_current_player bool = true
+	var white_is_current_player bool
+	var player_change bool = true
 	fmt.Println("start game")
+	var current_king_index int
+	pieces_a, white_king_index, black_king_index := initialize(w_x, w_y, a)
 
-	pieces_a := initialize(w_x, w_y, a)
-
-	rescale_image(a)
-
-	var moves_counter int16 = 1
+	var moves_counter int16
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
 	for { //gameloop
+
+		if player_change {
+
+			player_change = false
+			white_is_current_player, current_king_index = change_player(white_is_current_player, white_king_index, black_king_index)
+			fmt.Println(pieces_a[current_king_index].Is_White_Piece())
+			moves_counter++
+			fmt.Println(current_king_index)
+
+			pieces_a, _ = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)
+
+		}
 
 		button, status, m_x, m_y := gfx.MausLesen1()
 
@@ -32,6 +43,7 @@ func main() {
 			var current_field [2]uint16 = calc_field(a, m_x, m_y, 0)
 			var current_piece pieces.Piece
 			var piece_index int
+			var current_legal_moves [][3]uint16
 
 			for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
 				if pieces_a[piece_index] != nil {
@@ -43,8 +55,10 @@ func main() {
 			}
 
 			if current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player { //wenn die maus ein piece angeklickt hat, welches dem aktuellen spieler gehört
-				current_piece.Calc_Moves(pieces_a, moves_counter)
-				var current_legal_moves [][3]uint16 = current_piece.Give_Legal_Moves()
+				//current_piece.Calc_Moves(pieces_a, moves_counter)
+				current_legal_moves = current_piece.Give_Legal_Moves()
+				fmt.Println(current_piece.Give_Has_Moved())
+
 				var x_offset int16 = int16(current_piece.Give_Pos()[0]*a) - int16(m_x)
 				var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
 				var promotion uint16
@@ -72,8 +86,7 @@ func main() {
 									Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false)
 									pieces_a = Pawm_Promotion(w_x, w_y, a, piece_index, pieces_a)
 								}
-								white_is_current_player = change_player(white_is_current_player)
-								moves_counter++
+								player_change = true
 								break
 							}
 						}
@@ -138,23 +151,30 @@ func Draw_Board(a, w_x, w_y uint16, current_piece pieces.Piece, current_legal_mo
 	gfx.UpdateAn()
 }
 
-func change_player(white_is_current_player bool) bool {
+func change_player(white_is_current_player bool, white_king_index, black_king_index int) (bool, int) {
+	var current_king_index int
 	if white_is_current_player {
+		current_king_index = black_king_index
 		white_is_current_player = false
 	} else {
+		current_king_index = white_king_index
 		white_is_current_player = true
 	}
-	return white_is_current_player
+	return white_is_current_player, current_king_index
 }
 
-func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
+func initialize(w_x, w_y, a uint16) ([64]pieces.Piece, int, int) {
 	gfx.Fenster(w_x, w_y)
 	gfx.Fenstertitel("Chess")
 	gfx.Stiftfarbe(221, 221, 221)
 	gfx.Vollrechteck(0, 0, w_x, w_y)
+
+	rescale_image(a)
 	draw_background(a)
 
 	var pieces_a [64]pieces.Piece
+	var white_king_index int = -1
+	var black_king_index int = -1
 
 	pieces_a[0] = pieces.NewRook(0, 0, false)
 	pieces_a[1] = pieces.NewKnight(1, 0, false)
@@ -182,7 +202,18 @@ func initialize(w_x, w_y, a uint16) [64]pieces.Piece {
 	pieces_a[30] = pieces.NewKnight(6, 7, true)
 	pieces_a[31] = pieces.NewRook(7, 7, true)
 
-	return pieces_a
+	for i := 0; i < len(pieces_a); i++ {
+		if pieces_a[i] != nil {
+			if king, ok := pieces_a[i].(*pieces.King); ok {
+				if king.Is_White_Piece() {
+					white_king_index = i
+				} else if !king.Is_White_Piece() {
+					black_king_index = i
+				}
+			}
+		}
+	}
+	return pieces_a, white_king_index, black_king_index
 }
 
 func calc_a(w_x, w_y uint16) uint16 {
