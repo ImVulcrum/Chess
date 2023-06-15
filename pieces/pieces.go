@@ -57,9 +57,11 @@ func Draw_To_Point(piece Piece, w_x, w_y, a, x, y uint16, x_offset, y_offset int
 	gfx.UpdateAn()
 }
 
-func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece, reset bool) ([64]Piece, uint16) { //rook and king has moved change
+func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece, reset bool) ([64]Piece, uint16, int16, [2]uint16) { //rook and king has moved change
 	var promotion uint16 = 64
 	var Has_moved int16 = piece.Give_Has_Moved()
+	var rook_pos [2]uint16
+	var castle_status int16 = -1
 
 	if king, ok := piece.(*King); ok {
 		if new_position[2] == 64 { //normal move
@@ -68,6 +70,9 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 			king.Has_moved = 1
 			pieces_a[new_position[2]].Set_Has_Moved(1)
 			rook := pieces_a[new_position[2]]
+			rook_pos = rook.Give_Pos()
+			castle_status = int16(new_position[2])
+
 			if rook.Give_Pos()[0] == 7 { //right castle
 				new_position = [3]uint16{king.Give_Pos()[0] + 2, king.Give_Pos()[1], 64}
 				rook.Move_To([2]uint16{rook.Give_Pos()[0] - 2, rook.Give_Pos()[1]})
@@ -122,11 +127,14 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 
 	if reset {
 		piece.Set_Has_Moved(Has_moved)
+		if castle_status != -1 {
+			pieces_a[castle_status].Set_Has_Moved(0)
+		}
 	}
 
 	piece.Move_To([2]uint16{new_position[0], new_position[1]})
 
-	return pieces_a, promotion
+	return pieces_a, promotion, castle_status, rook_pos
 }
 
 func (c *ChessObject) Give_Pos() [2]uint16 {
@@ -173,6 +181,15 @@ func NewKing(x, y uint16, is_white bool) *King {
 	}
 }
 
+func Find_Piece_With_Pos(pieces_a [64]Piece, field [2]uint16) int {
+	for i := 0; i < len(pieces_a); i++ {
+		if pieces_a[i] != nil && pieces_a[i].Give_Pos() == field {
+			return i
+		}
+	}
+	return -1
+}
+
 func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 
@@ -194,7 +211,7 @@ func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 		//schlagen links
 		p.try_to_take(pieces_a, [2]uint16{p.Position[0] - 1, uint16(int16(p.Position[1]) + direction)}, true)
 		//zweier move
-		if p.Position[1] != uint16(int16(last_y)-direction) && p.Has_moved == -1 {
+		if p.Position[1] != uint16(int16(last_y)-direction) && p.Has_moved == -1 && Find_Piece_With_Pos(pieces_a, [2]uint16{p.Give_Pos()[0], uint16(int16(p.Give_Pos()[1]) + direction)}) == -1 { //überprüft nicht ob etwas davor steht
 			p.try_to_move(pieces_a, [2]uint16{p.Position[0], uint16(int16(p.Position[1]) + direction*2)}, 65)
 		}
 		//enpassant rechts
@@ -317,6 +334,8 @@ func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king
 	var current_field [2]uint16
 	var checkmate bool = true
 	var temp_pieces_a [64]Piece = pieces_a
+	var castle_status int16
+	var rook_pos [2]uint16
 
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil && pieces_a[i].Is_White_Piece() == pieces_a[current_king_index].Is_White_Piece() {
@@ -326,21 +345,24 @@ func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king
 			pieces_a[i].Calc_Moves(pieces_a, moves_counter)
 
 			current_legal_moves = pieces_a[i].Give_Legal_Moves()
+
 			pieces_a[i].Clear_Legal_Moves()
+
 			for k := 0; k < len(current_legal_moves); k++ {
-
-				temp_pieces_a, _ = Move_Piece_To(temp_pieces_a[i], current_legal_moves[k], moves_counter, pieces_a, true)
-
+				temp_pieces_a, _, castle_status, rook_pos = Move_Piece_To(temp_pieces_a[i], current_legal_moves[k], moves_counter, pieces_a, true)
+				fmt.Println("temp || right rook: ", temp_pieces_a[31].Give_Pos(), "king: ", temp_pieces_a[28].Give_Pos())
+				fmt.Println("normal || right rook: ", pieces_a[31].Give_Pos(), "king: ", pieces_a[28].Give_Pos())
 				if !pieces_a[current_king_index].(*King).Is_In_Check(temp_pieces_a, moves_counter) {
-					// if !Field_Can_Be_Captured(!pieces_a[current_king_index].Is_White_Piece(), pieces_a[current_king_index].Give_Pos(), temp_pieces_a, moves_counter) {
 					pieces_a[i].Append_Legal_Moves(current_legal_moves[k])
 					checkmate = false
 				}
+				if castle_status != -1 {
+					pieces_a[castle_status].Move_To(rook_pos)
+				}
 
 			}
-			fmt.Println("before: ", pieces_a[24].Give_Pos())
+
 			pieces_a[i].Move_To(current_field)
-			fmt.Println("after: ", pieces_a[24].Give_Pos())
 		}
 	}
 	return pieces_a, checkmate

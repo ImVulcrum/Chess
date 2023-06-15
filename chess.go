@@ -88,7 +88,7 @@ func main() {
 						for k := 0; k < len(current_legal_moves); k++ {
 							if new_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //wenn das der Fall ist, wird das Piece bewegt
 
-								pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a, false)
+								pieces_a, promotion, _, _ = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a, false)
 								if promotion != 64 {
 									Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 									pieces_a = Pawm_Promotion(w_x, w_y, a, piece_index, pieces_a)
@@ -212,6 +212,8 @@ func initialize(w_x, w_y, a uint16) ([64]pieces.Piece, int, int) {
 	pieces_a[29] = pieces.NewBishop(5, 7, true)
 	pieces_a[30] = pieces.NewKnight(6, 7, true)
 	pieces_a[31] = pieces.NewRook(7, 7, true)
+
+	fmt.Println(pieces_a[28])
 
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
