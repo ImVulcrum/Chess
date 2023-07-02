@@ -6,27 +6,30 @@ import (
 	gfx "../gfxw"
 )
 
-func (c *ChessObject) Give_Legal_Moves() [][3]uint16 {
+func (c ChessObject) Give_Legal_Moves() [][3]uint16 {
 	return c.Legal_Moves
 }
 
-func (c *ChessObject) Give_Has_Moved() int16 {
+func (c ChessObject) Give_Has_Moved() int16 {
 	return c.Has_moved
 }
 
-func (c *ChessObject) Set_Has_Moved(update int16) {
+func (c ChessObject) Set_Has_Moved(update int16) ChessObject {
 	c.Has_moved = update
+	return c
 }
 
-func (c *ChessObject) Clear_Legal_Moves() {
+func (c ChessObject) Clear_Legal_Moves() ChessObject {
 	c.Legal_Moves = nil
+	return c
 }
 
-func (c *ChessObject) Append_Legal_Moves(new_legal_move [3]uint16) {
+func (c ChessObject) Append_Legal_Moves(new_legal_move [3]uint16) ChessObject {
 	c.Legal_Moves = append(c.Legal_Moves, new_legal_move)
+	return c
 }
 
-func (c *ChessObject) Is_White_Piece() bool {
+func (c ChessObject) Is_White_Piece() bool {
 	return c.White
 }
 
@@ -63,7 +66,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 	var rook_pos [2]uint16
 	var castle_status int16 = -1
 
-	if king, ok := piece.(*King); ok {
+	if king, ok := piece.(King); ok {
 		if new_position[2] == 64 { //normal move
 			king.Has_moved = 1
 		} else if new_position[2] <= 63 { //castle
@@ -89,7 +92,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 			fmt.Println("panic: Error has occured, king move status is out of range")
 		}
 
-	} else if pawn, ok := piece.(*Pawn); ok {
+	} else if pawn, ok := piece.(Pawn); ok {
 		if new_position[2] == 65 { //double_move
 			// fmt.Println("moves_counter")
 			pawn.Has_moved = moves_counter
@@ -107,7 +110,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 		if (new_position[1] == 0 && pawn.Is_White_Piece()) || new_position[1] == 7 && !pawn.Is_White_Piece() {
 			for i := 0; i < len(pieces_a); i++ {
 				if pieces_a[i] != nil {
-					if pieces_a[i] == pawn {
+					if pieces_a[i].Give_Pos() == pawn.Give_Pos() {
 						promotion = uint16(i)
 					}
 				}
@@ -137,46 +140,46 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 	return pieces_a, promotion, castle_status, rook_pos
 }
 
-func (c *ChessObject) Give_Pos() [2]uint16 {
+func (c ChessObject) Give_Pos() [2]uint16 {
 	return c.Position
 }
 
-func (c *ChessObject) Piece_Is_White() bool {
+func (c ChessObject) Piece_Is_White() bool {
 	return c.White
 }
 
-func NewPawn(x, y uint16, is_white bool) *Pawn {
-	return &Pawn{
+func NewPawn(x, y uint16, is_white bool) Pawn {
+	return Pawn{
 		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white, Has_moved: -1},
 	}
 }
 
-func NewKnight(x, y uint16, is_white bool) *Knight {
-	return &Knight{
+func NewKnight(x, y uint16, is_white bool) Knight {
+	return Knight{
 		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
 	}
 }
 
-func NewBishop(x, y uint16, is_white bool) *Bishop {
-	return &Bishop{
+func NewBishop(x, y uint16, is_white bool) Bishop {
+	return Bishop{
 		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
 	}
 }
 
-func NewRook(x, y uint16, is_white bool) *Rook {
-	return &Rook{
+func NewRook(x, y uint16, is_white bool) Rook {
+	return Rook{
 		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
 	}
 }
 
-func NewQueen(x, y uint16, is_white bool) *Queen {
-	return &Queen{
+func NewQueen(x, y uint16, is_white bool) Queen {
+	return Queen{
 		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
 	}
 }
 
-func NewKing(x, y uint16, is_white bool) *King {
-	return &King{
+func NewKing(x, y uint16, is_white bool) King {
+	return King{
 		ChessObject: ChessObject{Positioning: Positioning{Position: [2]uint16{x, y}}, White: is_white},
 	}
 }
@@ -190,7 +193,7 @@ func Find_Piece_With_Pos(pieces_a [64]Piece, field [2]uint16) int {
 	return -1
 }
 
-func (p *Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
+func (p Pawn) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 
 	var direction int16 = 0
@@ -245,7 +248,7 @@ func Field_Can_Be_Captured(pieces_that_can_capture_are_white bool, field [2]uint
 	return false
 }
 
-func (p *Knight) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
+func (p Knight) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 2, p.Give_Pos()[1] + 1})
 	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] + 2, p.Give_Pos()[1] - 1})
@@ -257,23 +260,23 @@ func (p *Knight) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Calc_Normal_Move(pieces_a, [2]uint16{p.Give_Pos()[0] - 1, p.Give_Pos()[1] - 2})
 }
 
-func (p *Rook) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
+func (p Rook) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 	p.calc_moves_vertically_and_horizontally(pieces_a)
 }
 
-func (p *Bishop) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
+func (p Bishop) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 	p.calc_moves_diagonally(pieces_a)
 }
 
-func (p *Queen) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
+func (p Queen) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 	p.calc_moves_vertically_and_horizontally(pieces_a)
 	p.calc_moves_diagonally(pieces_a)
 }
 
-func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
+func (p King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	p.Clear_Legal_Moves()
 
 	var right_rochade_possible uint16 = 64
@@ -292,7 +295,7 @@ func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
-			if Rook, ok := pieces_a[i].(*Rook); ok {
+			if Rook, ok := pieces_a[i].(Rook); ok {
 				if Rook.Is_White_Piece() == p.Is_White_Piece() {
 					if uint16(int16(Rook.Give_Pos()[0])-int16(p.Give_Pos()[0])) == 3 && Rook.Has_moved == 0 && p.Has_moved == 0 {
 						right_rochade_possible = uint16(i)
@@ -318,7 +321,7 @@ func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	}
 }
 
-func (p *King) Is_In_Check(pieces_a [64]Piece, moves_counter int16) bool {
+func (p King) Is_In_Check(pieces_a [64]Piece, moves_counter int16) bool {
 	var field [2]uint16 = p.Give_Pos()
 
 	if Field_Can_Be_Captured(!p.Is_White_Piece(), field, pieces_a, moves_counter) {
@@ -346,13 +349,15 @@ func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king
 
 			current_legal_moves = pieces_a[i].Give_Legal_Moves()
 
+			fmt.Println(current_legal_moves)
+
 			pieces_a[i].Clear_Legal_Moves()
 
 			for k := 0; k < len(current_legal_moves); k++ {
 				temp_pieces_a, _, castle_status, rook_pos = Move_Piece_To(temp_pieces_a[i], current_legal_moves[k], moves_counter, pieces_a, true)
 				fmt.Println("temp || right rook: ", temp_pieces_a[31].Give_Pos(), "king: ", temp_pieces_a[28].Give_Pos())
 				fmt.Println("normal || right rook: ", pieces_a[31].Give_Pos(), "king: ", pieces_a[28].Give_Pos())
-				if !pieces_a[current_king_index].(*King).Is_In_Check(temp_pieces_a, moves_counter) {
+				if !pieces_a[current_king_index].(King).Is_In_Check(temp_pieces_a, moves_counter) {
 					pieces_a[i].Append_Legal_Moves(current_legal_moves[k])
 					checkmate = false
 				}

@@ -37,7 +37,7 @@ func main() {
 			moves_counter++
 			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)
 
-			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)
+			check = pieces_a[current_king_index].(pieces.King).Is_In_Check(pieces_a, moves_counter)
 			Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			fmt.Println("---")
 			if checkmate {
@@ -217,7 +217,7 @@ func initialize(w_x, w_y, a uint16) ([64]pieces.Piece, int, int) {
 
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
-			if king, ok := pieces_a[i].(*pieces.King); ok {
+			if king, ok := pieces_a[i].(pieces.King); ok {
 				if king.Is_White_Piece() {
 					white_king_index = i
 				} else if !king.Is_White_Piece() {
