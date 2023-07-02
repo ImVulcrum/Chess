@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	var w_x, w_y uint16 = 1000, 1000
+	var w_x, w_y uint16 = 800, 800
 	var a uint16 = calc_a(w_x, w_y)
 	var white_is_current_player bool
 	var player_change bool = true
@@ -37,11 +37,14 @@ func main() {
 			moves_counter++
 			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)
 
-			check = pieces_a[current_king_index].(pieces.King).Is_In_Check(pieces_a, moves_counter)
+			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)
 			Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			fmt.Println("---")
-			if checkmate {
+			if checkmate && check {
 				fmt.Println("checkmate")
+				gfx.TastaturLesen1()
+			} else if checkmate {
+				fmt.Println("Stalemate")
 				gfx.TastaturLesen1()
 			}
 
@@ -88,7 +91,7 @@ func main() {
 						for k := 0; k < len(current_legal_moves); k++ {
 							if new_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //wenn das der Fall ist, wird das Piece bewegt
 
-								pieces_a, promotion, _, _ = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a, false)
+								pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
 								if promotion != 64 {
 									Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 									pieces_a = Pawm_Promotion(w_x, w_y, a, piece_index, pieces_a)
@@ -217,7 +220,7 @@ func initialize(w_x, w_y, a uint16) ([64]pieces.Piece, int, int) {
 
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
-			if king, ok := pieces_a[i].(pieces.King); ok {
+			if king, ok := pieces_a[i].(*pieces.King); ok {
 				if king.Is_White_Piece() {
 					white_king_index = i
 				} else if !king.Is_White_Piece() {

@@ -14,10 +14,11 @@ type Piece interface {
 	Give_Pos() [2]uint16
 	Move_To(new_position [2]uint16)
 	Is_White_Piece() bool
-	Append_Legal_Moves(new_legal_move [3]uint16) ChessObject
-	Clear_Legal_Moves() ChessObject
-	Set_Has_Moved(update int16) ChessObject
+	Append_Legal_Moves(new_legal_move [3]uint16)
+	Clear_Legal_Moves()
+	Set_Has_Moved(update int16)
 	Give_Has_Moved() int16
+	DeepCopy(Piece) Piece
 }
 
 type Positioning struct { //datentyp Positioning
@@ -55,14 +56,44 @@ type King struct {
 	ChessObject
 }
 
-func (c ChessObject) Move_To(new_position [2]uint16) {
+func (c *ChessObject) Move_To(new_position [2]uint16) {
 	c.Position = new_position
 }
 
-func (p Pawn) can_do_enpassant(pieces_a [64]Piece, field, en_passant_pawn_pos [2]uint16, moves_counter int16) {
+func (p *Pawn) DeepCopy(current_piece Piece) Piece {
+	dst := *p
+	return &dst
+}
+
+func (p *Rook) DeepCopy(current_piece Piece) Piece {
+	dst := *p
+	return &dst
+}
+
+func (p *Knight) DeepCopy(current_piece Piece) Piece {
+	dst := *p
+	return &dst
+}
+
+func (p *King) DeepCopy(current_piece Piece) Piece {
+	dst := *p
+	return &dst
+}
+
+func (p *Queen) DeepCopy(current_piece Piece) Piece {
+	dst := *p
+	return &dst
+}
+
+func (p *Bishop) DeepCopy(current_piece Piece) Piece {
+	dst := *p
+	return &dst
+}
+
+func (p *Pawn) can_do_enpassant(pieces_a [64]Piece, field, en_passant_pawn_pos [2]uint16, moves_counter int16) {
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
-			if en_passant_pawn, ok := pieces_a[i].(Pawn); ok && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == en_passant_pawn_pos {
+			if en_passant_pawn, ok := pieces_a[i].(*Pawn); ok && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == en_passant_pawn_pos {
 				//andersfarbiger pawn rechts neben dem pawn --> en passant rechts
 				if en_passant_pawn.Has_moved > 0 && en_passant_pawn.Has_moved+1 == moves_counter {
 					p.Append_Legal_Moves([3]uint16{field[0], field[1], uint16(i)})
@@ -72,7 +103,7 @@ func (p Pawn) can_do_enpassant(pieces_a [64]Piece, field, en_passant_pawn_pos [2
 	}
 }
 
-func (p ChessObject) try_to_take(pieces_a [64]Piece, field [2]uint16, piece_is_king_or_pawn bool) {
+func (p *ChessObject) try_to_take(pieces_a [64]Piece, field [2]uint16, piece_is_king_or_pawn bool) {
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
 			if pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == field {
@@ -87,7 +118,7 @@ func (p ChessObject) try_to_take(pieces_a [64]Piece, field [2]uint16, piece_is_k
 	}
 }
 
-func (p ChessObject) try_to_move(pieces_a [64]Piece, field [2]uint16, status uint16) {
+func (p *ChessObject) try_to_move(pieces_a [64]Piece, field [2]uint16, status uint16) {
 	var blocking_piece bool
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
@@ -99,25 +130,24 @@ func (p ChessObject) try_to_move(pieces_a [64]Piece, field [2]uint16, status uin
 	}
 	if !blocking_piece {
 		p.Append_Legal_Moves([3]uint16{field[0], field[1], status})
-		fmt.Println(p.Give_Legal_Moves())
 	}
 }
 
-func (p Knight) Calc_Normal_Move(pieces_a [64]Piece, field [2]uint16) {
+func (p *Knight) Calc_Normal_Move(pieces_a [64]Piece, field [2]uint16) {
 	if move_is_in_board(field) {
 		p.try_to_move(pieces_a, field, 64)
 		p.try_to_take(pieces_a, field, false)
 	}
 }
 
-func (p King) Calc_Normal_Move(pieces_a [64]Piece, field [2]uint16) {
+func (p *King) Calc_Normal_Move(pieces_a [64]Piece, field [2]uint16) {
 	if move_is_in_board(field) {
 		p.try_to_move(pieces_a, field, 64)
 		p.try_to_take(pieces_a, field, true)
 	}
 }
 
-func (p ChessObject) check_if_piece_is_blocking(pieces_a [64]Piece, current_pos [2]uint16) bool {
+func (p *ChessObject) check_if_piece_is_blocking(pieces_a [64]Piece, current_pos [2]uint16) bool {
 	var blocking_piece Piece
 	var blocking_piece_index uint16
 	var var_break bool = false
@@ -144,7 +174,7 @@ func (p ChessObject) check_if_piece_is_blocking(pieces_a [64]Piece, current_pos 
 	return var_break
 }
 
-func (p ChessObject) calc_moves_diagonally(pieces_a [64]Piece) {
+func (p *ChessObject) calc_moves_diagonally(pieces_a [64]Piece) {
 	for new_x, new_y := p.Give_Pos()[0], p.Give_Pos()[1]; new_x < 7 && new_y < 7; {
 		new_x++
 		new_y++
@@ -186,7 +216,7 @@ func (p ChessObject) calc_moves_diagonally(pieces_a [64]Piece) {
 	}
 }
 
-func (p ChessObject) calc_moves_vertically_and_horizontally(pieces_a [64]Piece) {
+func (p *ChessObject) calc_moves_vertically_and_horizontally(pieces_a [64]Piece) {
 	for new_x := p.Give_Pos()[0]; new_x < 7; {
 		new_x++
 		var current_pos [2]uint16 = [2]uint16{new_x, p.Give_Pos()[1]}
@@ -241,37 +271,37 @@ func Copy_Piece_To_Clipboard(piece Piece, w_x, w_y, a uint16) {
 	//}
 
 	switch piece.(type) {
-	case Pawn:
+	case *Pawn:
 		if piece.Is_White_Piece() {
 			gfx.Clipboard_kopieren(0, a, a, a)
 		} else {
 			gfx.Clipboard_kopieren(0, 0, a, a)
 		}
-	case Knight:
+	case *Knight:
 		if piece.Is_White_Piece() {
 			gfx.Clipboard_kopieren(a, a, a, a)
 		} else {
 			gfx.Clipboard_kopieren(a, 0, a, a)
 		}
-	case Bishop:
+	case *Bishop:
 		if piece.Is_White_Piece() {
 			gfx.Clipboard_kopieren(2*a, a, a, a)
 		} else {
 			gfx.Clipboard_kopieren(2*a, 0, a, a)
 		}
-	case Rook:
+	case *Rook:
 		if piece.Is_White_Piece() {
 			gfx.Clipboard_kopieren(3*a, a, a, a)
 		} else {
 			gfx.Clipboard_kopieren(3*a, 0, a, a)
 		}
-	case Queen:
+	case *Queen:
 		if piece.Is_White_Piece() {
 			gfx.Clipboard_kopieren(4*a, a, a, a)
 		} else {
 			gfx.Clipboard_kopieren(4*a, 0, a, a)
 		}
-	case King:
+	case *King:
 		if piece.Is_White_Piece() {
 			gfx.Clipboard_kopieren(5*a, a, a, a)
 		} else {
