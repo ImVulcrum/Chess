@@ -42,7 +42,17 @@ func main() {
 			fmt.Println("---")
 			if checkmate && check {
 				fmt.Println("checkmate")
+				gfx.Stiftfarbe(0, 0, 0)
+				gfx.Transparenz(70)
+				gfx.Vollrechteck(0, 0, a*8, a*8)
+				gfx.Transparenz(0)
+				gfx.Stiftfarbe(221, 221, 221)
+				gfx.Vollrechteck((a), 3*a, 6*a, 2*a)
+				fmt.Println(gfx.SetzeFont("LiberationMono-Bold.ttf", 300))
+				gfx.Stiftfarbe(0, 0, 0)
+				gfx.SchreibeFont(a, 3*a, "hallo")
 				gfx.TastaturLesen1()
+				fmt.Println("wait")
 			} else if checkmate {
 				fmt.Println("Stalemate")
 				gfx.TastaturLesen1()
@@ -199,22 +209,22 @@ func initialize(w_x, w_y, a uint16) ([64]pieces.Piece, int, int) {
 	pieces_a[6] = pieces.NewKnight(6, 0, false)
 	pieces_a[7] = pieces.NewRook(7, 0, false)
 
-	var i uint16
-	for i = 0; i < 8; i++ {
-		pieces_a[i+8] = pieces.NewPawn(i, 1, false)
-	}
-	for i = 0; i < 8; i++ {
-		pieces_a[i+16] = pieces.NewPawn(i, 6, true)
-	}
+	//var i uint16
+	//for i = 0; i < 8; i++ {
+		//pieces_a[i+8] = pieces.NewPawn(i, 1, false)
+	//}
+	//for i = 0; i < 8; i++ {
+		//pieces_a[i+16] = pieces.NewPawn(i, 6, true)
+	//}
 
-	pieces_a[24] = pieces.NewRook(0, 7, true)
-	pieces_a[25] = pieces.NewKnight(1, 7, true)
-	pieces_a[26] = pieces.NewBishop(2, 7, true)
-	pieces_a[27] = pieces.NewQueen(3, 7, true)
+	//pieces_a[24] = pieces.NewRook(0, 7, true)
+	//pieces_a[25] = pieces.NewKnight(1, 7, true)
+	//pieces_a[26] = pieces.NewBishop(2, 7, true)
+	//pieces_a[27] = pieces.NewQueen(3, 7, true)
 	pieces_a[28] = pieces.NewKing(4, 7, true)
-	pieces_a[29] = pieces.NewBishop(5, 7, true)
-	pieces_a[30] = pieces.NewKnight(6, 7, true)
-	pieces_a[31] = pieces.NewRook(7, 7, true)
+	//pieces_a[29] = pieces.NewBishop(5, 7, true)
+	//pieces_a[30] = pieces.NewKnight(6, 7, true)
+	//pieces_a[31] = pieces.NewRook(7, 7, true)
 
 	fmt.Println(pieces_a[28])
 
