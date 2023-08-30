@@ -297,7 +297,7 @@ func draw_background(a uint16) {
 func rescale_image(a uint16) {
 
 	// Open the BMP file
-	file, err := os.Open("Pieces_Source_Original.bmp")
+	file, err := os.Open("Pieces_Source.bmp")
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return
