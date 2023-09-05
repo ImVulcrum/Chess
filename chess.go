@@ -46,11 +46,21 @@ func main() {
 				gfx.Transparenz(70)
 				gfx.Vollrechteck(0, 0, a*8, a*8)
 				gfx.Transparenz(0)
-				gfx.Stiftfarbe(221, 221, 221)
+				gfx.Stiftfarbe(8, 8, 8)
 				gfx.Vollrechteck((a), 3*a, 6*a, 2*a)
-				fmt.Println(gfx.SetzeFont("LiberationMono-Bold.ttf", 300))
-				gfx.Stiftfarbe(0, 0, 0)
-				gfx.SchreibeFont(a, 3*a, "hallo")
+
+				gfx.Stiftfarbe(220, 220, 220)
+				gfx.SetzeFont("junegull.ttf", int(5*a/10))
+				if !white_is_current_player {
+					gfx.SchreibeFont(18*a/10, 31*a/10, "player black has")
+				} else {
+					gfx.SchreibeFont(17*a/10, 31*a/10, "player white has")
+				}
+
+				gfx.Stiftfarbe(136, 8, 8)
+				gfx.SetzeFont("punk.ttf", int(a))
+				gfx.SchreibeFont(29*a/10, 37*a/10, "lost")
+
 				gfx.TastaturLesen1()
 				fmt.Println("wait")
 			} else if checkmate {
@@ -211,10 +221,10 @@ func initialize(w_x, w_y, a uint16) ([64]pieces.Piece, int, int) {
 
 	//var i uint16
 	//for i = 0; i < 8; i++ {
-		//pieces_a[i+8] = pieces.NewPawn(i, 1, false)
+	//pieces_a[i+8] = pieces.NewPawn(i, 1, false)
 	//}
 	//for i = 0; i < 8; i++ {
-		//pieces_a[i+16] = pieces.NewPawn(i, 6, true)
+	//pieces_a[i+16] = pieces.NewPawn(i, 6, true)
 	//}
 
 	//pieces_a[24] = pieces.NewRook(0, 7, true)
@@ -307,7 +317,7 @@ func draw_background(a uint16) {
 func rescale_image(a uint16) {
 
 	// Open the BMP file
-	file, err := os.Open("Pieces_Source.bmp")
+	file, err := os.Open("Pieces_Source_Original.bmp")
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return
