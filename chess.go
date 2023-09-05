@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	var w_x, w_y uint16 = 800, 800
+	var w_x, w_y uint16 = 400, 400
 	var a uint16 = calc_a(w_x, w_y)
 	var white_is_current_player bool
 	var player_change bool = true
@@ -42,29 +42,12 @@ func main() {
 			fmt.Println("---")
 			if checkmate && check {
 				fmt.Println("checkmate")
-				gfx.Stiftfarbe(0, 0, 0)
-				gfx.Transparenz(70)
-				gfx.Vollrechteck(0, 0, a*8, a*8)
-				gfx.Transparenz(0)
-				gfx.Stiftfarbe(8, 8, 8)
-				gfx.Vollrechteck((a), 3*a, 6*a, 2*a)
-
-				gfx.Stiftfarbe(220, 220, 220)
-				gfx.SetzeFont("junegull.ttf", int(5*a/10))
-				if !white_is_current_player {
-					gfx.SchreibeFont(18*a/10, 31*a/10, "player black has")
-				} else {
-					gfx.SchreibeFont(17*a/10, 31*a/10, "player white has")
-				}
-
-				gfx.Stiftfarbe(136, 8, 8)
-				gfx.SetzeFont("punk.ttf", int(a))
-				gfx.SchreibeFont(29*a/10, 37*a/10, "lost")
-
+				Game_end_visual(0, a, white_is_current_player)
 				gfx.TastaturLesen1()
 				fmt.Println("wait")
 			} else if checkmate {
 				fmt.Println("Stalemate")
+				Game_end_visual(1, a, white_is_current_player)
 				gfx.TastaturLesen1()
 			}
 
@@ -131,6 +114,41 @@ func main() {
 		}
 	}
 }
+
+func Game_end_visual (ending_var uint8, a uint16, white_is_current_player bool) {
+	
+	gfx.Stiftfarbe(0, 0, 0)
+	gfx.Transparenz(70)
+	gfx.Vollrechteck(0, 0, a*8, a*8)
+	gfx.Transparenz(50)
+	gfx.Stiftfarbe(8, 8, 8)
+	gfx.Vollrechteck((a), 3*a, 6*a, 2*a)
+
+	gfx.Stiftfarbe(220, 220, 220)
+	gfx.SetzeFont("junegull.ttf", int(5*a/10))
+	
+	if ending_var == 0 {
+	if !white_is_current_player {
+		gfx.SchreibeFont(18*a/10, 31*a/10, "player black has")
+	} else {
+		gfx.SchreibeFont(17*a/10, 31*a/10, "player white has")
+	}
+	gfx.Stiftfarbe(136, 8, 8)
+	gfx.SetzeFont("punk.ttf", int(a))
+	gfx.SchreibeFont(29*a/10, 37*a/10, "lost")
+	}
+	
+	if ending_var == 1 {
+	gfx.SchreibeFont(295*a/100, 31*a/10, "That's a ")
+
+	gfx.Stiftfarbe(0, 143, 230)
+	gfx.SetzeFont("punk.ttf", int(a))
+	gfx.SchreibeFont(144*a/100, 37*a/10, "stalemate")
+	}
+	
+	gfx.Transparenz(0)
+	
+	}
 
 func Pawm_Promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece) [64]pieces.Piece {
 	var queen pieces.Piece = pieces.NewQueen(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
