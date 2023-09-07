@@ -13,7 +13,7 @@ import (
 
 func main() {
 
-	parser.Parser()
+	premoves_array := parser.Create_Array_Of_Moves()
 
 	var w_x, w_y uint16 = 800, 800
 	var a uint16 = calc_a(w_x, w_y)
@@ -29,6 +29,7 @@ func main() {
 	var current_legal_moves [][3]uint16
 	var moves_counter int16
 	var current_field [2]uint16
+	var there_are_no_premoves bool = true
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
@@ -48,7 +49,6 @@ func main() {
 				fmt.Println("checkmate")
 				Game_end_visual(0, a, white_is_current_player)
 				gfx.TastaturLesen1()
-				fmt.Println("wait")
 			} else if checkmate {
 				fmt.Println("Stalemate")
 				Game_end_visual(1, a, white_is_current_player)
@@ -57,61 +57,71 @@ func main() {
 
 		}
 
-		button, status, m_x, m_y := gfx.MausLesen1()
+		if len(premoves_array) > 0 {
+			fmt.Println(len(premoves_array))
+			there_are_no_premoves = false
+		} else {
+			there_are_no_premoves = true
+		}
 
-		if status == 1 && button == 1 {
-			current_field = calc_field(a, m_x, m_y, 0)
+		if there_are_no_premoves {
 
-			for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
-				if pieces_a[piece_index] != nil {
-					if current_field == pieces_a[piece_index].Give_Pos() {
-						current_piece = pieces_a[piece_index]
-						break
-					}
-				}
-			}
+			button, status, m_x, m_y := gfx.MausLesen1()
 
-			if current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player { //wenn die maus ein piece angeklickt hat, welches dem aktuellen spieler gehört
-				//current_piece.Calc_Moves(pieces_a, moves_counter)
-				current_legal_moves = current_piece.Give_Legal_Moves()
+			if status == 1 && button == 1 {
+				current_field = calc_field(a, m_x, m_y, 0)
 
-				var x_offset int16 = int16(current_piece.Give_Pos()[0]*a) - int16(m_x)
-				var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
-				var promotion uint16 = 0
-
-				Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
-
-				for {
-					button, status, m_x, m_y := gfx.MausLesen1() //hält so lange an, bis die maus bewegt wurde
-					if status != -1 && button == 1 {
-						//schwebenedes piece wenn taste gehalten wird
-						pieces.Draw_To_Point(current_piece, w_x, w_y, a, m_x, m_y, x_offset, y_offset, 50)
-
-					} else { //wenn taste losgelassen wird
-						new_field := calc_field(a, uint16(int16(m_x)+x_offset+int16(a)/2), uint16(int16(m_y)+y_offset+int16(a)/2), 0)
-
-						if new_field == current_piece.Give_Pos() { //wenn taste über dem gleichen feld losgelassen wird wie die Figur steht
-							gfx.Restaurieren(0, 0, w_x, w_y)
+				for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
+					if pieces_a[piece_index] != nil {
+						if current_field == pieces_a[piece_index].Give_Pos() {
+							current_piece = pieces_a[piece_index]
 							break
 						}
-						//überprüfen ob das Feld über dem die Maus losgelassen wurde in den Legal Moves des angeklickten Pieces enthalten ist
-						for k := 0; k < len(current_legal_moves); k++ {
-							if new_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //wenn das der Fall ist, wird das Piece bewegt
+					}
+				}
 
-								pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
-								if promotion != 64 {
-									Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-									pieces_a = Pawm_Promotion(w_x, w_y, a, piece_index, pieces_a)
-								}
+				if current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player { //wenn die maus ein piece angeklickt hat, welches dem aktuellen spieler gehört
+					//current_piece.Calc_Moves(pieces_a, moves_counter)
+					current_legal_moves = current_piece.Give_Legal_Moves()
 
-								player_change = true
+					var x_offset int16 = int16(current_piece.Give_Pos()[0]*a) - int16(m_x)
+					var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
+					var promotion uint16 = 0
+
+					Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
+
+					for {
+						button, status, m_x, m_y := gfx.MausLesen1() //hält so lange an, bis die maus bewegt wurde
+						if status != -1 && button == 1 {
+							//schwebenedes piece wenn taste gehalten wird
+							pieces.Draw_To_Point(current_piece, w_x, w_y, a, m_x, m_y, x_offset, y_offset, 50)
+
+						} else { //wenn taste losgelassen wird
+							new_field := calc_field(a, uint16(int16(m_x)+x_offset+int16(a)/2), uint16(int16(m_y)+y_offset+int16(a)/2), 0)
+
+							if new_field == current_piece.Give_Pos() { //wenn taste über dem gleichen feld losgelassen wird wie die Figur steht
+								gfx.Restaurieren(0, 0, w_x, w_y)
 								break
 							}
+							//überprüfen ob das Feld über dem die Maus losgelassen wurde in den Legal Moves des angeklickten Pieces enthalten ist
+							for k := 0; k < len(current_legal_moves); k++ {
+								if new_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //wenn das der Fall ist, wird das Piece bewegt
+
+									pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
+									if promotion != 64 {
+										Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+										pieces_a = Pawm_Promotion(w_x, w_y, a, piece_index, pieces_a)
+									}
+
+									player_change = true
+									break
+								}
+							}
+							//entweder wurde ein piece bewegt oder die maus wurde auf einem Feld losgelassen, welches nicht in Legal_Moves enthalten ist
+							//in jedem Fall wird das Feld neugezeichnet
+							Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+							break
 						}
-						//entweder wurde ein piece bewegt oder die maus wurde auf einem Feld losgelassen, welches nicht in Legal_Moves enthalten ist
-						//in jedem Fall wird das Feld neugezeichnet
-						Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-						break
 					}
 				}
 			}
