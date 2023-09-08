@@ -86,7 +86,6 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 
 	} else if pawn, ok := piece.(*Pawn); ok {
 		if new_position[2] == 65 { //double_move
-			// fmt.Println("moves_counter")
 			pawn.Has_moved = moves_counter
 		} else if new_position[2] <= 63 { //en passant
 			pieces_a[new_position[2]] = nil

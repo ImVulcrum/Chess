@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+
+	"../pieces"
 )
 
 func clean_pgn(input_string string) string {
@@ -73,23 +75,41 @@ func Create_Array_Of_Moves() []string {
 	return cleanedMoves
 }
 
-func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, white_is_current_player bool) {
+func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index int) ([3]uint16, int) {
+	var long_rook int = 64
+	var short_rook int = 64
+	var correct_move [3]uint16
+	var field [2]uint16
+	var piece_executing_move int
+
 	if move[len(move)-1] != 'O' {
-		Get_Field_From_Move(move, white_is_current_player)
+		field = Get_Field_From_Move(move, current_king_index)
+		fmt.Println(field)
 
 	} else { //rochade
-		if move == "O-O" { //short castle
+		for i := 0; i < len(pieces_a); i++ {
+			if pieces_a[i] != nil {
+				if pieces_a[i].Give_Pos()[0] == 0 && pieces_a[i].Give_Pos()[1] == pieces_a[current_king_index].Give_Pos()[1] {
+					long_rook = i
+				}
+				if pieces_a[i].Give_Pos()[0] == 7 && pieces_a[i].Give_Pos()[1] == pieces_a[current_king_index].Give_Pos()[1] {
+					short_rook = i
+				}
 
-		} else if move == "O-O-O" { //long castle
-
-		} else {
-			fmt.Println("Error while Reading Premove File: Expected either (O-O) or (O-O-O), got", move, "instead")
+			}
 		}
 	}
-
+	if move == "O-O" { //short castle
+		correct_move = [3]uint16{0, pieces_a[current_king_index].Give_Pos()[1], uint16(short_rook)}
+	} else if move == "O-O-O" { //long castle
+		correct_move = [3]uint16{7, pieces_a[current_king_index].Give_Pos()[1], uint16(long_rook)}
+	} else {
+		fmt.Println("Error while Reading Premove File: Expected either (O-O) or (O-O-O), got", move, "instead")
+	}
+	return correct_move, piece_executing_move
 }
 
-func Get_Field_From_Move(move string, white_is_current_player bool) [2]uint16 {
+func Get_Field_From_Move(move string, current_king_index int) [2]uint16 {
 	var Field [2]uint16
 
 	return Field
