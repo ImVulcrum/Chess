@@ -58,7 +58,7 @@ func main() {
 		}
 
 		if len(premoves_array) > 0 {
-			fmt.Println(len(premoves_array))
+			//fmt.Println(len(premoves_array))
 			there_are_no_premoves = false
 		} else {
 			there_are_no_premoves = true
@@ -110,7 +110,7 @@ func main() {
 									pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
 									if promotion != 64 {
 										Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-										pieces_a = Pawm_Promotion(w_x, w_y, a, piece_index, pieces_a)
+										pieces_a = Pawn_Promotion(w_x, w_y, a, piece_index, pieces_a, "A")
 									}
 
 									player_change = true
@@ -164,39 +164,51 @@ func Game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
 
 }
 
-func Pawm_Promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece) [64]pieces.Piece {
+func Pawn_Promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece, premoved string) [64]pieces.Piece {
 	var queen pieces.Piece = pieces.NewQueen(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
 	var knight pieces.Piece = pieces.NewKnight(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
 	var rook pieces.Piece = pieces.NewRook(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
 	var bishop pieces.Piece = pieces.NewBishop(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
 
-	gfx.Stiftfarbe(0, 0, 0)
-	gfx.Transparenz(70)
-	gfx.Vollrechteck(0, 0, a*8, a*8)
-	gfx.Transparenz(0)
-	gfx.Stiftfarbe(221, 221, 221)
-	gfx.Vollrechteck((2 * a), (4*a)-(5*a)/10, 4*a, a)
+	if premoved == "A" {
+		gfx.Stiftfarbe(0, 0, 0)
+		gfx.Transparenz(70)
+		gfx.Vollrechteck(0, 0, a*8, a*8)
+		gfx.Transparenz(0)
+		gfx.Stiftfarbe(221, 221, 221)
+		gfx.Vollrechteck((2 * a), (4*a)-(5*a)/10, 4*a, a)
 
-	pieces.Draw_To_Point(queen, w_x, w_y, a, (2 * a), (4*a)-(5*a)/10, 0, 0, 0)
-	pieces.Draw_To_Point(knight, w_x, w_y, a, (3 * a), (4*a)-(5*a)/10, 0, 0, 0)
-	pieces.Draw_To_Point(rook, w_x, w_y, a, (4 * a), (4*a)-(5*a)/10, 0, 0, 0)
-	pieces.Draw_To_Point(bishop, w_x, w_y, a, (5 * a), (4*a)-(5*a)/10, 0, 0, 0)
-	for {
-		button, status, m_x, m_y := gfx.MausLesen1()
-		if button == 1 && status == 1 && m_x >= 2*a && m_x <= 6*a && m_y >= (4*a)-(5*a)/10 && m_y <= (4*a)+(5*a)/10 {
-			x_field_pos := (calc_field(a, m_x, m_y, (5*a)/10))[0]
-			if x_field_pos == 2 {
-				pieces_a[pawn_index] = queen
-			} else if x_field_pos == 3 {
-				pieces_a[pawn_index] = knight
-			} else if x_field_pos == 4 {
-				pieces_a[pawn_index] = rook
-			} else if x_field_pos == 5 {
-				pieces_a[pawn_index] = bishop
+		pieces.Draw_To_Point(queen, w_x, w_y, a, (2 * a), (4*a)-(5*a)/10, 0, 0, 0)
+		pieces.Draw_To_Point(knight, w_x, w_y, a, (3 * a), (4*a)-(5*a)/10, 0, 0, 0)
+		pieces.Draw_To_Point(rook, w_x, w_y, a, (4 * a), (4*a)-(5*a)/10, 0, 0, 0)
+		pieces.Draw_To_Point(bishop, w_x, w_y, a, (5 * a), (4*a)-(5*a)/10, 0, 0, 0)
+		for {
+			button, status, m_x, m_y := gfx.MausLesen1()
+			if button == 1 && status == 1 && m_x >= 2*a && m_x <= 6*a && m_y >= (4*a)-(5*a)/10 && m_y <= (4*a)+(5*a)/10 {
+				x_field_pos := (calc_field(a, m_x, m_y, (5*a)/10))[0]
+				if x_field_pos == 2 {
+					pieces_a[pawn_index] = queen
+				} else if x_field_pos == 3 {
+					pieces_a[pawn_index] = knight
+				} else if x_field_pos == 4 {
+					pieces_a[pawn_index] = rook
+				} else if x_field_pos == 5 {
+					pieces_a[pawn_index] = bishop
+				}
+				break
 			}
-			break
 		}
 
+	} else {
+		if premoved == "Q" {
+			pieces_a[pawn_index] = queen
+		} else if premoved == "N" {
+			pieces_a[pawn_index] = knight
+		} else if premoved == "R" {
+			pieces_a[pawn_index] = rook
+		} else if premoved == "B" {
+			pieces_a[pawn_index] = bishop
+		}
 	}
 	return pieces_a
 }
@@ -268,7 +280,7 @@ func initialize(w_x, w_y, a uint16) ([64]pieces.Piece, int, int) {
 	//pieces_a[30] = pieces.NewKnight(6, 7, true)
 	//pieces_a[31] = pieces.NewRook(7, 7, true)
 
-	fmt.Println(pieces_a[28])
+	//fmt.Println(pieces_a[28])
 
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {

@@ -98,7 +98,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 		} else {
 			fmt.Println("panic: Error has occured, pawn move status is out of range")
 		}
-		if (new_position[1] == 0 && pawn.Is_White_Piece()) || new_position[1] == 7 && !pawn.Is_White_Piece() {
+		if (new_position[1] == 0 && pawn.Is_White_Piece()) || new_position[1] == 7 && !pawn.Is_White_Piece() { //promotion
 			for i := 0; i < len(pieces_a); i++ {
 				if pieces_a[i] != nil {
 					if pieces_a[i] == pawn {

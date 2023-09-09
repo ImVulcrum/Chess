@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -75,15 +76,29 @@ func Create_Array_Of_Moves() []string {
 	return cleanedMoves
 }
 
-func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index int) ([3]uint16, int) {
+func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index int) ([3]uint16, int, string) {
 	var long_rook int = 64
 	var short_rook int = 64
 	var correct_move [3]uint16
 	var field [2]uint16
 	var piece_executing_move int
+	var pawn_promotion_to_piece string = "A" //A indicates that there is no pawn promotion
 
-	if move[len(move)-1] != 'O' {
-		field = Get_Field_From_Move(move, current_king_index)
+	if move[len(move)-1] != 'O' { //normal move
+		if move[len(move)-2:len(move)-1] == "=" { //Pawn promotion
+			pawn_promotion_to_piece = move[len(move)-1:]
+			move = move[:len(move)-2]
+		}
+
+		field = Get_Field_From_Move(move)
+
+		if firstChar := rune(move[0]); !unicode.IsUpper(firstChar) { //pawn move cuz the string does not start with an uppercase letter
+			if len(move) == 2 { // Simple Pawn Move
+				//i need a function in pieces.go that receives a field, a x and y specification and a piece and searches truth
+				//pieces_a to get a piece that matches the specifications and is able to move to the given field
+			}
+		}
+
 		fmt.Println(field)
 
 	} else { //rochade
@@ -106,11 +121,41 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 	} else {
 		fmt.Println("Error while Reading Premove File: Expected either (O-O) or (O-O-O), got", move, "instead")
 	}
-	return correct_move, piece_executing_move
+	return correct_move, piece_executing_move, pawn_promotion_to_piece
 }
 
-func Get_Field_From_Move(move string, current_king_index int) [2]uint16 {
-	var Field [2]uint16
+func Translate_PGN_Field_Notation(cord_string string) (uint16, bool) {
+	var cord uint16
+	var is_x_cord bool
 
-	return Field
+	if len(cord_string) != 1 {
+		fmt.Println("Error: Unexpected lenght of string while trying to convert it from pgn field notation to a square notation")
+		cord = 8
+	} else {
+		if unicode.IsDigit(rune(cord_string[0])) {
+			is_x_cord = false
+
+			num, _ := strconv.Atoi(cord_string)
+			num = num - 1
+			cord = uint16(num)
+		} else {
+			is_x_cord = true
+
+			cord = uint16(cord_string[0] - 'a')
+		}
+	}
+	return cord, is_x_cord
+}
+
+func Get_Field_From_Move(move string) [2]uint16 {
+	var field [2]uint16
+
+	var x_cord string = move[len(move)-2 : len(move)-1]
+	var y_cord string = move[len(move)-1:]
+
+	x, _ := Translate_PGN_Field_Notation(x_cord)
+	y, _ := Translate_PGN_Field_Notation(y_cord)
+
+	field = [2]uint16{x, y}
+	return field
 }
