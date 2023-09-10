@@ -359,9 +359,9 @@ func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king
 
 			pieces_a[i].Clear_Legal_Moves()
 
-			if i == current_king_index {
-				fmt.Println(current_legal_moves)
-			}
+			// if i == current_king_index {
+			// 	fmt.Println(current_legal_moves)
+			// }
 
 			for k := 0; k < len(current_legal_moves); k++ { //iterates trough the legal moves for the current piece
 				temp_pieces_a := Copy_Array(pieces_a) //this creates a deep copy of the pieces array --> resets after evry legal move

@@ -48,14 +48,7 @@ func Create_Array_Of_Moves() []string {
 	[Black "Spassky, Boris V."]
 	[Result "1/2-1/2"]
 	
-	1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 {This opening is called the Ruy Lopez.}
-	4. Ba4 Nf3 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7
-	11. c4 c6 12. cxb5 axb5 13. Nc3 Bb7 14. Bg5 b4 15. Nb1 h6 16. Bh4 c5 17. dxe5
-	Nxe4 18. Bxe7 Qxe7 19. exd6 Qf6 20. Nbd2 Nxd6 21. Nc4 Nxc4 22. Bxc4 Nb6
-	23. Ne5 Rae8 24. Bxf7+ Rxf7 25. Nxf7 Rxe1+ 26. Qxe1 Kxf7 27. Qe3 Qg5 28. Qxg5
-	hxg5 29. b3 Ke6 30. a3 Kd6 31. axb4 cxb4 32. Ra5 Nd5 33. f3 Bc8 34. Kf2 Bf5
-	35. Ra7 g6 36. Ra6+ Kc5 37. Ke1 Nf4 38. g3 Nxh3 39. Kd2 Kb5 40. Rd6 Kc5 41. Ra6
-	Nf2 42. g4 Bd3 43. Re6 1/2-1/2`
+	1. d4 Nf6 2. c4 e6 3. Nf3 d5 4. e3 c5 5. Nc3 Nc6 6. a3 dxc4 7. Bxc4 a6 8. O-O b5 9. Ba2 Bb7 10. Qe2 Be7 11. Rd1 Qc7 12. dxc5 Bxc5 13. b4 Ba7 14. Bb2 O-O 15. h3 Rad8 16. Rac1 Bb8 17. Nb1 Rxd1+ 18. Rxd1 Ne4 19. Nbd2 Nxd2 20. Rxd2 Rd8 21. Bb1 Rxd2 22. Qxd2 Qd6 23. Qc2 f5 24. Qc3 Qd1+ 25. Qe1 Qxe1+ 26. Nxe1 Be5 27. Bc1 a5 28. Ba2 Kf7 29. Nd3 axb4 30. Nxe5+ Nxe5 31. axb4 Nd3 32. Bd2 Bd5 33. Bxd5 exd5 34. Kf1 Ke6 35. Bc3 g6 36. Ke2 Ne5 37. Bxe5 Kxe5 38. Kd3 g5 39. g4 h6 40. gxf5 Kxf5 41. Kd4 h5 42. f3 Ke6 43. Kc5 Ke5 44. Kxb5 d4 45. exd4+ Kxd4 46. Ka5 Ke3 47. b5 Kxf3 48. b6 g4 49. hxg4 hxg4 50. b7 g3 51. b8=Q g2 52. Qb6 1-0`
 
 	var cleaned_string string = clean_pgn(inputString)
 
@@ -76,12 +69,10 @@ func Create_Array_Of_Moves() []string {
 	return cleanedMoves
 }
 
-func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index int) ([3]uint16, int, string) {
-	var long_rook int = 64
-	var short_rook int = 64
-	var correct_move [3]uint16
+func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index int) (int, int, string) {
 	var field [2]uint16
 	var piece_executing_move int
+	var index_of_correct_legal_move int
 	var pawn_promotion_to_piece string = "A" //A indicates that there is no pawn promotion
 
 	if move[len(move)-1] != 'O' { //normal move
@@ -94,34 +85,101 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 
 		if firstChar := rune(move[0]); !unicode.IsUpper(firstChar) { //pawn move cuz the string does not start with an uppercase letter
 			if len(move) == 2 { // Simple Pawn Move
-				//i need a function in pieces.go that receives a field, a x and y specification and a piece and searches truth
-				//pieces_a to get a piece that matches the specifications and is able to move to the given field
+				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), "P", "0")
+				fmt.Println(piece_executing_move, index_of_correct_legal_move)
+			} else if len(move) == 3 {
+				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), "P", string(move[0]))
+			}
+		} else { //Piece move cuz the move string starts with an uppercase letter
+			if len(move) == 3 { // simple piece move, the first character of the move string indicates the piece that is moving
+				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), string(move[0]), "0")
+			} else if len(move) == 4 { //piece move with position, the first character of the move string indicates the piece that is moving, the second the starting position
+				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), string(move[0]), string(move[1]))
 			}
 		}
 
-		fmt.Println(field)
+		fmt.Println("Field we're moving to is: ", field)
 
-	} else { //rochade
-		for i := 0; i < len(pieces_a); i++ {
-			if pieces_a[i] != nil {
-				if pieces_a[i].Give_Pos()[0] == 0 && pieces_a[i].Give_Pos()[1] == pieces_a[current_king_index].Give_Pos()[1] {
-					long_rook = i
-				}
-				if pieces_a[i].Give_Pos()[0] == 7 && pieces_a[i].Give_Pos()[1] == pieces_a[current_king_index].Give_Pos()[1] {
-					short_rook = i
-				}
-
-			}
-		}
-	}
-	if move == "O-O" { //short castle
-		correct_move = [3]uint16{0, pieces_a[current_king_index].Give_Pos()[1], uint16(short_rook)}
-	} else if move == "O-O-O" { //long castle
-		correct_move = [3]uint16{7, pieces_a[current_king_index].Give_Pos()[1], uint16(long_rook)}
 	} else {
-		fmt.Println("Error while Reading Premove File: Expected either (O-O) or (O-O-O), got", move, "instead")
+		if move == "O-O" { //short castle
+			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{7, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0")
+		} else if move == "O-O-O" { //long castle
+			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{0, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0")
+		} else {
+			fmt.Println("Error while Reading Premove File: Expected either (O-O) or (O-O-O), got", move, "instead")
+		}
+
 	}
-	return correct_move, piece_executing_move, pawn_promotion_to_piece
+	return piece_executing_move, index_of_correct_legal_move, pawn_promotion_to_piece
+}
+
+// func Test_function(pieces_a [64]pieces.Piece) {
+// 	var current_piece_type string
+// 	var piece_type string = "B"
+
+// 	for i := 0; i < len(pieces_a); i++ {
+// 		if pieces_a[i] != nil {
+// 			switch pieces_a[i].(type) {
+// 			case *pieces.Rook:
+// 				current_piece_type = "R"
+// 			case *pieces.King:
+// 				current_piece_type = "K"
+// 			case *pieces.Pawn:
+// 				current_piece_type = "P"
+// 			case *pieces.Queen:
+// 				current_piece_type = "Q"
+// 			case *pieces.Bishop:
+// 				current_piece_type = "B"
+// 			case *pieces.Knight:
+// 				current_piece_type = "N"
+// 			default:
+// 				fmt.Println("Error in Parser while iterating through pieces array: Unexpected piece type")
+// 			}
+// 			if current_piece_type == piece_type {
+// 				fmt.Println("this is correct piece")
+// 				fmt.Println(i)
+// 			}
+// 		}
+// 	}
+// }
+
+func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, white_is_current_player bool, piece_type string, position string) (int, int) {
+	var current_piece_type string = "A"
+
+	for i := 0; i < len(pieces_a); i++ {
+		if pieces_a[i] != nil && pieces_a[i].Is_White_Piece() == white_is_current_player {
+			for k := 0; k < len(pieces_a[i].Give_Legal_Moves()); k++ {
+				if pieces_a[i].Give_Legal_Moves()[k][0] == field[0] && pieces_a[i].Give_Legal_Moves()[k][1] == field[1] { //there is a piece in the correct color with the given move
+					cord, is_x_cord := Translate_PGN_Field_Notation(position)
+
+					if (is_x_cord && cord == pieces_a[i].Give_Pos()[0]) || (!is_x_cord && cord == pieces_a[i].Give_Pos()[1]) || cord == 8 { //check if the piece has the given x or y cord or has no cord specifictaion indicated by cord beeing 8
+						switch pieces_a[i].(type) {
+						case *pieces.Rook:
+							current_piece_type = "R"
+						case *pieces.King:
+							current_piece_type = "K"
+						case *pieces.Pawn:
+							current_piece_type = "P"
+						case *pieces.Queen:
+							current_piece_type = "Q"
+						case *pieces.Bishop:
+							current_piece_type = "B"
+						case *pieces.Knight:
+							current_piece_type = "N"
+						default:
+							fmt.Println("Error in Parser while iterating through pieces array: Unexpected piece type")
+						}
+						if current_piece_type == piece_type {
+							return i, k
+						}
+					}
+
+				}
+			}
+		}
+	}
+	fmt.Println("Error in Parser: there is no piece is the pieces array that matches the specifications given")
+	return 64, 0
 }
 
 func Translate_PGN_Field_Notation(cord_string string) (uint16, bool) {
@@ -132,11 +190,14 @@ func Translate_PGN_Field_Notation(cord_string string) (uint16, bool) {
 		fmt.Println("Error: Unexpected lenght of string while trying to convert it from pgn field notation to a square notation")
 		cord = 8
 	} else {
-		if unicode.IsDigit(rune(cord_string[0])) {
+		if unicode.IsDigit(rune(cord_string[0])) { //8 --> 0
+			//7--> 1
+			//1 --> 7
 			is_x_cord = false
 
 			num, _ := strconv.Atoi(cord_string)
-			num = num - 1
+			num = num - 8
+			num = -num
 			cord = uint16(num)
 		} else {
 			is_x_cord = true
