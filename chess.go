@@ -13,17 +13,37 @@ import (
 )
 
 func main() {
-
-	premoves_array := parser.Create_Array_Of_Moves()
-	//var premoves_array []string
+	fmt.Println("start game")
 
 	var w_x, w_y uint16 = 800, 800
+	var duration_of_premove_animation int = 500
+	var premoves string = `
+	[Event "Open NOR-ch"]
+	[Site "Oslo NOR"]
+	[Date "2001.04.08"]
+	[Round "3"]
+	[White "Flores,R"]
+	[Black "Carlsen,M"]
+	[Result "0-1"]
+	[WhiteElo ""]
+	[BlackElo "2064"]
+	[ECO "B76"]
+
+	1.e4 c5 2.Nf3 d6 3.d4 Nf6 4.Nc3 cxd4 5.Nxd4 g6 6.f3 Bg7 7.Be3 O-O 8.Qd2 Nc6
+	9.Nb3 Be6 10.Bh6 a5 11.Bxg7 Kxg7 12.g4 Ne5 13.Be2 Nc4 14.Bxc4 Bxc4 15.h4 a4
+	16.Nd4 e5 17.Ndb5 d5 18.g5 Nh5 19.exd5 Nf4 20.O-O-O Ra5 21.Na3 Bxd5 22.Nxd5 Rxd5
+	23.Qe3 Rxd1+ 24.Rxd1 Qc7 25.Qe4 Qc5 26.Qxb7 Ne2+ 27.Kd2 Qf2 28.Qc7 e4 29.fxe4 Re8
+	30.e5 Qd4+ 31.Ke1 Qe4 32.Kd2 Rxe5 33.c4 Qf4+ 34.Kc2 Nd4+ 35.Rxd4 Qxd4 36.Qxe5+ Qxe5
+	37.b4 Qe2+  0-1
+	`
+	premoves_array := parser.Create_Array_Of_Moves(premoves)
 	var a uint16 = calc_a(w_x, w_y)
 	var white_is_current_player bool
 	var player_change bool = true
-	fmt.Println("start game")
 	var current_king_index int
-	pieces_a, white_king_index, black_king_index := initialize(w_x, w_y, a)
+
+	pieces_a, white_king_index, black_king_index := initialize(w_x, w_y, a, false)
+
 	var checkmate bool
 	var check bool
 	var current_piece pieces.Piece
@@ -31,9 +51,10 @@ func main() {
 	var current_legal_moves [][3]uint16
 	var moves_counter int16
 	var current_field [2]uint16
-	var there_are_no_premoves bool = true
+	var there_are_no_premoves bool = false
+	var restart bool
 
-	//parser.Test_function(pieces_a)
+	var ending_premoves bool = true
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
@@ -41,51 +62,57 @@ func main() {
 
 		if player_change {
 
+			restart = false
 			player_change = false
 			white_is_current_player, current_king_index = change_player(white_is_current_player, white_king_index, black_king_index)
 			moves_counter++
-			fmt.Println("()calculating moves()")
 			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)
 
 			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)
-			Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-			fmt.Println("---")
+
+			if there_are_no_premoves || duration_of_premove_animation != 0 {
+				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+			}
+
+			//fmt.Println("---")
 			if checkmate && check {
-				fmt.Println("checkmate")
-				Game_end_visual(0, a, white_is_current_player)
+				fmt.Println("Checkmate")
+				game_end_visual(0, a, white_is_current_player)
 				gfx.TastaturLesen1()
+				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change = restart_game(w_x, w_y, a)
 			} else if checkmate {
 				fmt.Println("Stalemate")
-				Game_end_visual(1, a, white_is_current_player)
+				game_end_visual(1, a, white_is_current_player)
 				gfx.TastaturLesen1()
+				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change = restart_game(w_x, w_y, a)
 			}
 
 		}
 
 		if len(premoves_array) > 0 {
 			var promotion uint16 = 0
-			fmt.Println("premoves o:", premoves_array[0])
+			fmt.Println("premove:", premoves_array[0])
 			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index)
-			fmt.Println("piece_executing_move:", piece_executing_move, "with move:", index_of_move)
 
 			pieces_a, promotion = pieces.Move_Piece_To(pieces_a[piece_executing_move], pieces_a[piece_executing_move].Give_Legal_Moves()[index_of_move], moves_counter, pieces_a)
 
 			if promotion != 64 {
-				fmt.Println("promotion hsdfihgfdizghifdhghifdhg")
-				pieces_a = Pawn_Promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to)
+				pieces_a = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to)
 			}
 			premoves_array = premoves_array[1:]
 
-			Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-			time.Sleep(500 * time.Millisecond)
-			there_are_no_premoves = false
+			time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
 			player_change = true
-			fmt.Println("--------------------------------------------------------")
-		} else {
+
+			//there_are_no_premoves = false
+		} else if ending_premoves {
+			draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			there_are_no_premoves = true
+			ending_premoves = false
+			fmt.Println("----- End of Premoves -----")
 		}
 
-		if there_are_no_premoves {
+		if there_are_no_premoves && !restart {
 
 			button, status, m_x, m_y := gfx.MausLesen1()
 
@@ -109,7 +136,7 @@ func main() {
 					var y_offset int16 = int16(current_piece.Give_Pos()[1]*a) - int16(m_y)
 					var promotion uint16 = 0
 
-					Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
+					draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
 
 					for {
 						button, status, m_x, m_y := gfx.MausLesen1() //hält so lange an, bis die maus bewegt wurde
@@ -130,8 +157,8 @@ func main() {
 
 									pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
 									if promotion != 64 {
-										Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-										pieces_a = Pawn_Promotion(w_x, w_y, a, piece_index, pieces_a, "A")
+										draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+										pieces_a = pawn_promotion(w_x, w_y, a, piece_index, pieces_a, "A")
 									}
 
 									player_change = true
@@ -140,7 +167,7 @@ func main() {
 							}
 							//entweder wurde ein piece bewegt oder die maus wurde auf einem Feld losgelassen, welches nicht in Legal_Moves enthalten ist
 							//in jedem Fall wird das Feld neugezeichnet
-							Draw_Board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+							draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 							break
 						}
 					}
@@ -150,7 +177,13 @@ func main() {
 	}
 }
 
-func Game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
+func restart_game(w_x, w_y, a uint16) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool) {
+	pieces_a, white_king_index, black_king_index := initialize(w_x, w_y, a, true)
+
+	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true
+}
+
+func game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
 
 	gfx.Stiftfarbe(0, 0, 0)
 	gfx.Transparenz(70)
@@ -185,10 +218,8 @@ func Game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
 
 }
 
-func Pawn_Promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece, premoved string) [64]pieces.Piece {
-	fmt.Println("infunc")
+func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece, premoved string) [64]pieces.Piece {
 	var queen pieces.Piece = pieces.NewQueen(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
-	fmt.Println("infunc")
 	var knight pieces.Piece = pieces.NewKnight(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
 	var rook pieces.Piece = pieces.NewRook(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
 	var bishop pieces.Piece = pieces.NewBishop(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
@@ -223,7 +254,6 @@ func Pawn_Promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piec
 		}
 
 	} else {
-		fmt.Println("promo")
 		if premoved == "Q" {
 			pieces_a[pawn_index] = queen
 		} else if premoved == "N" {
@@ -237,7 +267,7 @@ func Pawn_Promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piec
 	return pieces_a
 }
 
-func Draw_Board(a, w_x, w_y uint16, current_piece pieces.Piece, current_legal_moves [][3]uint16, pieces_a [64]pieces.Piece, highlighting_is_activated bool, current_king_index int, check bool) {
+func draw_board(a, w_x, w_y uint16, current_piece pieces.Piece, current_legal_moves [][3]uint16, pieces_a [64]pieces.Piece, highlighting_is_activated bool, current_king_index int, check bool) {
 	gfx.UpdateAus()
 	draw_background(a)
 	if check {
@@ -265,13 +295,15 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 	return white_is_current_player, current_king_index
 }
 
-func initialize(w_x, w_y, a uint16) ([64]pieces.Piece, int, int) {
-	gfx.Fenster(w_x, w_y)
-	gfx.Fenstertitel("Chess")
+func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int) {
+	if !restart {
+		gfx.Fenster(w_x, w_y)
+		gfx.Fenstertitel("Chess")
+		rescale_image(a)
+	}
+
 	gfx.Stiftfarbe(221, 221, 221)
 	gfx.Vollrechteck(0, 0, w_x, w_y)
-
-	rescale_image(a)
 	draw_background(a)
 
 	var pieces_a [64]pieces.Piece

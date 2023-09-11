@@ -373,20 +373,16 @@ func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king
 
 					if i == current_king_index && current_legal_moves[k][2] <= 63 { //rochade move
 						rook := pieces_a[current_legal_moves[k][2]].(*Rook)
-						fmt.Println("this is a castle move")
-						fmt.Println("rook pos:", rook.Give_Pos())
 						if rook.Give_Pos()[0] == 7 &&
 							!Field_Can_Be_Captured(!rook.Is_White_Piece(), rook.Give_Pos(), pieces_a, moves_counter) &&
 							!Field_Can_Be_Captured(!rook.Is_White_Piece(), [2]uint16{rook.Give_Pos()[0] - 2, rook.Give_Pos()[1]}, pieces_a, moves_counter) &&
 							!Field_Can_Be_Captured(!rook.Is_White_Piece(), pieces_a[current_king_index].Give_Pos(), pieces_a, moves_counter) { //right castle
-							fmt.Println("right castle")
 							pieces_a[i].Append_Legal_Moves(current_legal_moves[k])
 							checkmate = false
 						} else if rook.Give_Pos()[0] == 0 &&
 							!Field_Can_Be_Captured(!rook.Is_White_Piece(), rook.Give_Pos(), pieces_a, moves_counter) &&
 							!Field_Can_Be_Captured(!rook.Is_White_Piece(), [2]uint16{rook.Give_Pos()[0] + 1, rook.Give_Pos()[1]}, pieces_a, moves_counter) &&
 							!Field_Can_Be_Captured(!rook.Is_White_Piece(), pieces_a[current_king_index].Give_Pos(), pieces_a, moves_counter) { //left castle
-							fmt.Println("left castle")
 							pieces_a[i].Append_Legal_Moves(current_legal_moves[k])
 							checkmate = false
 						} //else: rochade is not possible because one of the involved squares can be captured

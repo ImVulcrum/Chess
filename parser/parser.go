@@ -12,6 +12,10 @@ import (
 
 func clean_pgn(input_string string) string {
 
+	//make spaces after the points
+	parts := strings.Split(input_string, ".")
+	input_string = strings.Join(parts, ". ")
+
 	//remove tag section
 	var string_without_tags string = input_string
 	index := strings.LastIndex(input_string, "]")                    //find the last instance of a closed bracket
@@ -31,26 +35,15 @@ func clean_pgn(input_string string) string {
 			result.WriteByte(cleaned[i])
 		}
 	}
-
 	//remove comments
 	re := regexp.MustCompile(`\{[^}]*\}`)
 	cleaned_string := re.ReplaceAllString(result.String(), "")
-
 	return cleaned_string
 }
 
-func Create_Array_Of_Moves() []string {
-	inputString := `[Event "F/S Return Match"]
-	[Site "Belgrade, Serbia JUG"]
-	[Date "1992.11.04"]
-	[Round "29"]
-	[White "Fischer, Robert J."]
-	[Black "Spassky, Boris V."]
-	[Result "1/2-1/2"]
-	
-	1. d4 Nf6 2. c4 e6 3. Nf3 d5 4. e3 c5 5. Nc3 Nc6 6. a3 dxc4 7. Bxc4 a6 8. O-O b5 9. Ba2 Bb7 10. Qe2 Be7 11. Rd1 Qc7 12. dxc5 Bxc5 13. b4 Ba7 14. Bb2 O-O 15. h3 Rad8 16. Rac1 Bb8 17. Nb1 Rxd1+ 18. Rxd1 Ne4 19. Nbd2 Nxd2 20. Rxd2 Rd8 21. Bb1 Rxd2 22. Qxd2 Qd6 23. Qc2 f5 24. Qc3 Qd1+ 25. Qe1 Qxe1+ 26. Nxe1 Be5 27. Bc1 a5 28. Ba2 Kf7 29. Nd3 axb4 30. Nxe5+ Nxe5 31. axb4 Nd3 32. Bd2 Bd5 33. Bxd5 exd5 34. Kf1 Ke6 35. Bc3 g6 36. Ke2 Ne5 37. Bxe5 Kxe5 38. Kd3 g5 39. g4 h6 40. gxf5 Kxf5 41. Kd4 h5 42. f3 Ke6 43. Kc5 Ke5 44. Kxb5 d4 45. exd4+ Kxd4 46. Ka5 Ke3 47. b5 Kxf3 48. b6 g4 49. hxg4 hxg4 50. b7 g3 51. b8=Q g2 52. Qb6 1-0`
+func Create_Array_Of_Moves(input_string string) []string {
 
-	var cleaned_string string = clean_pgn(inputString)
+	var cleaned_string string = clean_pgn(input_string)
 
 	//create a list with every move
 	moves := strings.Split(cleaned_string, " ")
@@ -60,12 +53,10 @@ func Create_Array_Of_Moves() []string {
 			cleanedMoves = append(cleanedMoves, move)
 		}
 	}
-
-	fmt.Println("start of list")
-	for i := 0; i < len(cleanedMoves); i++ {
-		fmt.Println("-" + cleanedMoves[i] + "-")
-	}
-	fmt.Println("-----------------------------------------dfdsfgsdgsd----------------------------")
+	// for i := 0; i < len(cleanedMoves); i++ {
+	// 	fmt.Println("-" + cleanedMoves[i] + "-")
+	// }
+	// fmt.Println("------------")
 	return cleanedMoves
 }
 
@@ -86,7 +77,6 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 		if firstChar := rune(move[0]); !unicode.IsUpper(firstChar) { //pawn move cuz the string does not start with an uppercase letter
 			if len(move) == 2 { // Simple Pawn Move
 				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), "P", "0")
-				fmt.Println(piece_executing_move, index_of_correct_legal_move)
 			} else if len(move) == 3 {
 				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), "P", string(move[0]))
 			}
@@ -98,8 +88,6 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 			}
 		}
 
-		fmt.Println("Field we're moving to is: ", field)
-
 	} else {
 		if move == "O-O" { //short castle
 			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{7, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0")
@@ -108,40 +96,9 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 		} else {
 			fmt.Println("Error while Reading Premove File: Expected either (O-O) or (O-O-O), got", move, "instead")
 		}
-
 	}
 	return piece_executing_move, index_of_correct_legal_move, pawn_promotion_to_piece
 }
-
-// func Test_function(pieces_a [64]pieces.Piece) {
-// 	var current_piece_type string
-// 	var piece_type string = "B"
-
-// 	for i := 0; i < len(pieces_a); i++ {
-// 		if pieces_a[i] != nil {
-// 			switch pieces_a[i].(type) {
-// 			case *pieces.Rook:
-// 				current_piece_type = "R"
-// 			case *pieces.King:
-// 				current_piece_type = "K"
-// 			case *pieces.Pawn:
-// 				current_piece_type = "P"
-// 			case *pieces.Queen:
-// 				current_piece_type = "Q"
-// 			case *pieces.Bishop:
-// 				current_piece_type = "B"
-// 			case *pieces.Knight:
-// 				current_piece_type = "N"
-// 			default:
-// 				fmt.Println("Error in Parser while iterating through pieces array: Unexpected piece type")
-// 			}
-// 			if current_piece_type == piece_type {
-// 				fmt.Println("this is correct piece")
-// 				fmt.Println(i)
-// 			}
-// 		}
-// 	}
-// }
 
 func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, white_is_current_player bool, piece_type string, position string) (int, int) {
 	var current_piece_type string = "A"
@@ -173,7 +130,6 @@ func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, 
 							return i, k
 						}
 					}
-
 				}
 			}
 		}
@@ -190,18 +146,14 @@ func Translate_PGN_Field_Notation(cord_string string) (uint16, bool) {
 		fmt.Println("Error: Unexpected lenght of string while trying to convert it from pgn field notation to a square notation")
 		cord = 8
 	} else {
-		if unicode.IsDigit(rune(cord_string[0])) { //8 --> 0
-			//7--> 1
-			//1 --> 7
+		if unicode.IsDigit(rune(cord_string[0])) {
 			is_x_cord = false
-
 			num, _ := strconv.Atoi(cord_string)
 			num = num - 8
 			num = -num
 			cord = uint16(num)
 		} else {
 			is_x_cord = true
-
 			cord = uint16(cord_string[0] - 'a')
 		}
 	}
