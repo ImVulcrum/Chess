@@ -36,15 +36,12 @@ func main() {
 	// 	`
 	var w_x, w_y uint16 = 800, 800
 	var duration_of_premove_animation int = 0
+	var deselect_piece_after_clicking = true
 
-	premoves_array := parser.Create_Array_Of_Moves(premoves)
 	var a uint16 = calc_a(w_x, w_y)
 	var white_is_current_player bool
 	var player_change bool = true
 	var current_king_index int
-
-	pieces_a, white_king_index, black_king_index := initialize(w_x, w_y, a, false)
-
 	var checkmate bool
 	var check bool
 	var current_piece pieces.Piece
@@ -55,10 +52,12 @@ func main() {
 	var current_field [2]uint16
 	var there_are_no_premoves bool = false
 	var restart bool
-
+	var dragging bool
 	var ending_premoves bool = true
-
 	var piece_is_selected uint16 = 64
+
+	pieces_a, white_king_index, black_king_index := initialize(w_x, w_y, a, false)
+	premoves_array := parser.Create_Array_Of_Moves(premoves)
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
@@ -118,34 +117,31 @@ func main() {
 		if there_are_no_premoves && !restart {
 			button, status, m_x, m_y := gfx.MausLesen1()
 
+			if dragging && !(button == 1 && status == 0) {
+				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
+				dragging = false
+			}
+
 			if status == 1 && button == 1 {
-				fmt.Println("-------------Entering Click--------------")
+				fmt.Println("Entering Click")
 				current_field = calc_field(a, m_x, m_y, 0)
 
-				temp_current_piece = nil
-				for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
-					if pieces_a[piece_index] != nil {
-						if current_field == pieces_a[piece_index].Give_Pos() {
-							temp_current_piece = pieces_a[piece_index]
-							break
-						}
-					}
-				}
+				temp_current_piece, piece_index = get_current_piece(pieces_a, current_field)
 
 				if piece_is_selected != 64 {
-					fmt.Println("Click: piece is selected")
 					//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
 					pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
 				}
 
 				//auswählen eines pieces
-				if temp_current_piece != nil && temp_current_piece.Is_White_Piece() == white_is_current_player { //select
+				if temp_current_piece != nil && temp_current_piece.Is_White_Piece() == white_is_current_player && (!deselect_piece_after_clicking || (current_piece == nil || temp_current_piece.Give_Pos() != current_piece.Give_Pos())) { //select
 					fmt.Println("Click: selected piece")
 					current_piece = temp_current_piece
 					current_legal_moves = current_piece.Give_Legal_Moves()
 					promotion = 0
 					draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
 					piece_is_selected = uint16(piece_index)
+
 				} else if piece_is_selected != 64 && ((temp_current_piece == nil) || (temp_current_piece != nil && (temp_current_piece.Give_Pos() == current_piece.Give_Pos() || temp_current_piece.Is_White_Piece() != white_is_current_player))) { //deselect
 					//sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, auf das bereits ausgewählte Piece nocheinmal geklickt wurde oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
 					fmt.Println("Click: deselect after click on same piece, the field, or an enemy piece")
@@ -153,38 +149,44 @@ func main() {
 					draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 					piece_is_selected = 64
 				}
-			}
-			if status == -1 && button == 1 {
+
+			} else if status == -1 && button == 1 {
 				fmt.Println("Entering Release")
 				current_field = calc_field(a, m_x, m_y, 0)
-
-				temp_current_piece = nil
-				for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
-					if pieces_a[piece_index] != nil {
-						if current_field == pieces_a[piece_index].Give_Pos() {
-							temp_current_piece = pieces_a[piece_index]
-							break
-						}
-					}
-				}
+				temp_current_piece, _ = get_current_piece(pieces_a, current_field)
 
 				if piece_is_selected != 64 {
 					//überprüfen ob in current legal moves
-					fmt.Println("Release: piece is selected")
 					pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
-				}
 
-				//Sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde oder auf ein generisches Piece geklickt wurde
-				if piece_is_selected != 64 && ((temp_current_piece == nil) || (temp_current_piece != nil && temp_current_piece.Is_White_Piece() != white_is_current_player)) { //deselect
-					fmt.Println("Release: deselect after release on the field or enemy piece")
-					current_piece = nil
-					draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-					piece_is_selected = 64
-
+					//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde oder auf ein generisches Piece geklickt wurde
+					if (temp_current_piece == nil) || (temp_current_piece != nil && ((temp_current_piece.Is_White_Piece() != white_is_current_player) || (temp_current_piece.Is_White_Piece() == white_is_current_player && temp_current_piece.Give_Pos() != current_piece.Give_Pos()))) { //deselect
+						fmt.Println("Release: deselect after release on the field or enemy piece")
+						current_piece = nil
+						draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+						piece_is_selected = 64
+					}
 				}
+			} else if status == 0 && button == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player {
+				dragging = true
+				pieces.Draw_To_Point(current_piece, w_x, w_y, a, m_x, m_y, -int16(a/2), -int16(a/2), 50)
 			}
 		}
 	}
+}
+
+func get_current_piece(pieces_a [64]pieces.Piece, current_field [2]uint16) (pieces.Piece, int) {
+	var temp_current_piece pieces.Piece = nil
+	var piece_index int
+	for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
+		if pieces_a[piece_index] != nil {
+			if current_field == pieces_a[piece_index].Give_Pos() {
+				temp_current_piece = pieces_a[piece_index]
+				break
+			}
+		}
+	}
+	return temp_current_piece, piece_index
 }
 
 func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [64]pieces.Piece, promotion uint16, piece_is_selected uint16, a, w_x, w_y uint16, current_king_index int, check bool, moves_counter int16) ([64]pieces.Piece, uint16, bool, uint16) {
