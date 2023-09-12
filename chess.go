@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"./buttons"
 	gfx "./gfxw"
 	"./imaging"
 	"./parser"
@@ -33,11 +34,11 @@ func main() {
 		30.e5 Qd4+ 31.Ke1 Qe4 32.Kd2 Rxe5 33.c4 Qf4+ 34.Kc2 Nd4+ 35.Rxd4 Qxd4 36.Qxe5+ Qxe5
 		37.b4 Qe2+  0-1
 		`
-	var w_x, w_y uint16 = 1000, 800
+	var a uint16 = 100
+	var w_x, w_y uint16 = 10 * a, 8 * a
 	var duration_of_premove_animation int = 1
 	var deselect_piece_after_clicking = true
 
-	var a uint16 = calc_a(w_x, w_y)
 	var white_is_current_player bool
 	var player_change bool = true
 	var current_king_index int
@@ -55,7 +56,7 @@ func main() {
 	var ending_premoves bool = true
 	var piece_is_selected uint16 = 64
 
-	pieces_a, white_king_index, black_king_index := initialize(w_x, w_y, a, false)
+	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward := initialize(w_x, w_y, a, false)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
 
 	draw_pieces(pieces_a, w_x, w_y, a)
@@ -80,11 +81,11 @@ func main() {
 			if checkmate && check {
 				game_end_visual(0, a, white_is_current_player)
 				gfx.TastaturLesen1()
-				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change = restart_game(w_x, w_y, a)
+				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change = restart_game(w_x, w_y, a, one_move_back, one_move_forward)
 			} else if checkmate {
 				game_end_visual(1, a, white_is_current_player)
 				gfx.TastaturLesen1()
-				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change = restart_game(w_x, w_y, a)
+				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change = restart_game(w_x, w_y, a, one_move_back, one_move_forward)
 			}
 
 		}
@@ -119,26 +120,33 @@ func main() {
 			}
 
 			if status == 1 && button == 1 {
-				current_field = calc_field(a, m_x, m_y, 0)
-				temp_current_piece, piece_index = get_current_piece(pieces_a, current_field)
+				if one_move_back.Is_Clicked(m_x, m_y) {
+					fmt.Println("back")
+				} else if one_move_forward.Is_Clicked(m_x, m_y) {
+					fmt.Println("forward")
+				} else {
 
-				//auswählen eines pieces
-				if temp_current_piece != nil && temp_current_piece.Is_White_Piece() == white_is_current_player && (!deselect_piece_after_clicking || (current_piece == nil || temp_current_piece.Give_Pos() != current_piece.Give_Pos())) {
-					current_piece = temp_current_piece
-					current_legal_moves = current_piece.Give_Legal_Moves()
-					promotion = 0
-					draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
-					piece_is_selected = uint16(piece_index)
+					current_field = calc_field(a, m_x, m_y, 0)
+					temp_current_piece, piece_index = get_current_piece(pieces_a, current_field)
 
-				} else if piece_is_selected != 64 {
-					//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
-					pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
+					//auswählen eines pieces
+					if temp_current_piece != nil && temp_current_piece.Is_White_Piece() == white_is_current_player && (!deselect_piece_after_clicking || (current_piece == nil || temp_current_piece.Give_Pos() != current_piece.Give_Pos())) {
+						current_piece = temp_current_piece
+						current_legal_moves = current_piece.Give_Legal_Moves()
+						promotion = 0
+						draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
+						piece_is_selected = uint16(piece_index)
 
-					//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, auf das bereits ausgewählte Piece nocheinmal geklickt wurde oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
-					if (temp_current_piece == nil) || (temp_current_piece != nil && (temp_current_piece.Give_Pos() == current_piece.Give_Pos() || temp_current_piece.Is_White_Piece() != white_is_current_player)) {
-						current_piece = nil
-						draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-						piece_is_selected = 64
+					} else if piece_is_selected != 64 {
+						//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
+						pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
+
+						//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, auf das bereits ausgewählte Piece nocheinmal geklickt wurde oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
+						if (temp_current_piece == nil) || (temp_current_piece != nil && (temp_current_piece.Give_Pos() == current_piece.Give_Pos() || temp_current_piece.Is_White_Piece() != white_is_current_player)) {
+							current_piece = nil
+							draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+							piece_is_selected = 64
+						}
 					}
 				}
 
@@ -198,8 +206,8 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 	return pieces_a, piece_is_selected, false, promotion
 }
 
-func restart_game(w_x, w_y, a uint16) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool) {
-	pieces_a, white_king_index, black_king_index := initialize(w_x, w_y, a, true)
+func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Button) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool) {
+	pieces_a, white_king_index, black_king_index, _, _ := initialize(w_x, w_y, a, true)
 
 	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true
 }
@@ -214,7 +222,7 @@ func game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
 	gfx.Vollrechteck((a), 3*a, 6*a, 2*a)
 
 	gfx.Stiftfarbe(220, 220, 220)
-	gfx.SetzeFont("junegull.ttf", int(5*a/10))
+	gfx.SetzeFont("./resources/fonts/junegull.ttf", int(5*a/10))
 
 	if ending_var == 0 {
 		if !white_is_current_player {
@@ -223,7 +231,7 @@ func game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
 			gfx.SchreibeFont(17*a/10, 31*a/10, "player white has")
 		}
 		gfx.Stiftfarbe(136, 8, 8)
-		gfx.SetzeFont("punk.ttf", int(a))
+		gfx.SetzeFont("./resources/fonts/punk.ttf", int(a))
 		gfx.SchreibeFont(29*a/10, 37*a/10, "lost")
 	}
 
@@ -231,7 +239,7 @@ func game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
 		gfx.SchreibeFont(295*a/100, 31*a/10, "That's a ")
 
 		gfx.Stiftfarbe(0, 143, 230)
-		gfx.SetzeFont("punk.ttf", int(a))
+		gfx.SetzeFont("./resources/fonts/punk.ttf", int(a))
 		gfx.SchreibeFont(144*a/100, 37*a/10, "stalemate")
 	}
 
@@ -316,16 +324,31 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 	return white_is_current_player, current_king_index
 }
 
-func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int) {
+func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button) {
+	var one_move_back buttons.Button
+	var one_move_forward buttons.Button
+
 	if !restart {
 		gfx.Fenster(w_x, w_y)
 		gfx.Fenstertitel("Chess")
 		rescale_image(a)
+		one_move_back = *buttons.New(8*a+a/10, 7*a+a/10, a-a/5, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4))
+		one_move_forward = *buttons.New(9*a+a/10, 7*a+a/10, a-a/5, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4))
+
+		gfx.Stiftfarbe(86, 82, 77)
+		gfx.Vollrechteck(8*a, 7*a, 2*a, a)
+		one_move_back.Draw()
+		one_move_forward.Draw()
 	}
 
-	gfx.Stiftfarbe(221, 221, 221)
-	gfx.Vollrechteck(0, 0, w_x, w_y)
+	gfx.Stiftfarbe(48, 46, 43)
+	gfx.Vollrechteck(8*a, 0, 2*a, 7*a)
 	draw_background(a)
+
+	gfx.Stiftfarbe(124, 119, 111)
+	gfx.Vollrechteck(8*a+a/10, a/10, a, 7*a-a/5)
+	gfx.Stiftfarbe(22, 21, 20)
+	gfx.Vollrechteck(9*a, a/10, a-a/10, 7*a-a/5)
 
 	var pieces_a [64]pieces.Piece
 	var white_king_index int = -1
@@ -368,18 +391,18 @@ func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int) {
 			}
 		}
 	}
-	return pieces_a, white_king_index, black_king_index
+	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward
 }
 
-func calc_a(w_x, w_y uint16) uint16 {
-	var a uint16
-	if w_x < w_y {
-		a = w_x / 8
-	} else {
-		a = w_y / 8
-	}
-	return a
-}
+// func calc_a(w_x, w_y uint16) uint16 {
+// 	var a uint16
+// 	if w_x < w_y {
+// 		a = w_x / 8
+// 	} else {
+// 		a = w_y / 8
+// 	}
+// 	return a
+// }
 
 func draw_pieces(pieces_a [64]pieces.Piece, w_x, w_y, a uint16) {
 	for i := 0; i < len(pieces_a); i++ {
@@ -436,7 +459,7 @@ func draw_background(a uint16) {
 func rescale_image(a uint16) {
 
 	// Open the BMP file
-	file, err := os.Open("Pieces_Source_Original.bmp")
+	file, err := os.Open("./resources/images/Pieces_Source_Original.bmp")
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return
@@ -458,7 +481,7 @@ func rescale_image(a uint16) {
 	resizedImg := imaging.Resize(img, width, height, imaging.NearestNeighbor)
 
 	// Save the resized image to a new BMP file
-	err = imaging.Save(resizedImg, "Pieces.bmp")
+	err = imaging.Save(resizedImg, "./resources/images/Pieces.bmp")
 	if err != nil {
 		fmt.Println("Error saving file:", err)
 		return
