@@ -339,12 +339,6 @@ func Copy_Array(pieces_a [64]Piece) [64]Piece {
 	return copy_of_pieces_a
 }
 
-func Search_In_All_The_Legal_Moves_For_A_Certain_Move(pieces_a [64]Piece, new_field [2]uint16) [64]int {
-	var indexes_of_all_pieces_with_give_move [64]int
-
-	return indexes_of_all_pieces_with_give_move
-}
-
 func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king_index int) ([64]Piece, bool) {
 
 	var current_legal_moves [][3]uint16
