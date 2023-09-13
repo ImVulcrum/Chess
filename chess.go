@@ -15,27 +15,27 @@ import (
 
 func main() {
 	fmt.Println("start game")
-	var premoves string = `
-	[Event "Open NOR-ch"]
-	[Site "Oslo NOR"]
-	[Date "2001.04.12"]
-	[Round "7"]
-	[White "Aarefjord,Christian"]
-	[Black "Carlsen,M"]
-	[Result "0-1"]
-	[WhiteElo ""]
-	[BlackElo "2064"]
-	[ECO "C55"]
+	var premoves string = "" //`
+	// [Event "Open NOR-ch"]
+	// [Site "Oslo NOR"]
+	// [Date "2001.04.12"]
+	// [Round "7"]
+	// [White "Aarefjord,Christian"]
+	// [Black "Carlsen,M"]
+	// [Result "0-1"]
+	// [WhiteElo ""]
+	// [BlackElo "2064"]
+	// [ECO "C55"]
 
-	1.e4 e5 2.Nf3 Nf6 3.Nc3 Nc6 4.Bc4 Bb4 5.d3 d5 6.exd5 Nxd5 7.Bd2 Nxc3 8.bxc3 Be7
-	9.Qe2 Bf6 10.O-O O-O 11.Rfe1 Re8 12.Qe4 g6 13.g4 Na5 14.Bb3 Nxb3 15.axb3 Bd7
-	16.g5 Bc6 17.Qh4 Bg7 18.Qg4 Qd6 19.Re2 Re6 20.Rae1 Rae8 21.c4 b6 22.Bc1 Ba8
-	23.Nd2 Bc6 24.Ne4 Qe7 25.Re3 h5 26.Qg3 Bd7 27.Bb2 Bc6 28.Nf6+ Bxf6 29.gxf6 Qxf6
-	30.Rxe5 Rxe5 31.Rxe5 Rd8 32.Qe3 Qh4 33.Qg5 Qxg5+ 34.Rxg5 Re8 35.Kf1 Bf3 36.Re5 Rd8
-	37.Ke1 Kf8 38.Ba3+ Kg8 39.Re7 Rc8 40.Kd2 h4 41.Ke3 Bh5 42.Kd2 g5 43.Rd7 g4
-	44.Re7 Kg7 45.Ke3 Kf6 46.d4 c5 47.Rxa7 Re8+ 48.Kd2 cxd4 49.Rd7 g3 50.fxg3 Re2+
-	51.Kd3 Rxh2 52.gxh4 Bg6+ 53.Kxd4 Rd2+  0-1
-		`
+	// 1.e4 e5 2.Nf3 Nf6 3.Nc3 Nc6 4.Bc4 Bb4 5.d3 d5 6.exd5 Nxd5 7.Bd2 Nxc3 8.bxc3 Be7
+	// 9.Qe2 Bf6 10.O-O O-O 11.Rfe1 Re8 12.Qe4 g6 13.g4 Na5 14.Bb3 Nxb3 15.axb3 Bd7
+	// 16.g5 Bc6 17.Qh4 Bg7 18.Qg4 Qd6 19.Re2 Re6 20.Rae1 Rae8 21.c4 b6 22.Bc1 Ba8
+	// 23.Nd2 Bc6 24.Ne4 Qe7 25.Re3 h5 26.Qg3 Bd7 27.Bb2 Bc6 28.Nf6+ Bxf6 29.gxf6 Qxf6
+	// 30.Rxe5 Rxe5 31.Rxe5 Rd8 32.Qe3 Qh4 33.Qg5 Qxg5+ 34.Rxg5 Re8 35.Kf1 Bf3 36.Re5 Rd8
+	// 37.Ke1 Kf8 38.Ba3+ Kg8 39.Re7 Rc8 40.Kd2 h4 41.Ke3 Bh5 42.Kd2 g5 43.Rd7 g4
+	// 44.Re7 Kg7 45.Ke3 Kf6 46.d4 c5 47.Rxa7 Re8+ 48.Kd2 cxd4 49.Rd7 g3 50.fxg3 Re2+
+	// 51.Kd3 Rxh2 52.gxh4 Bg6+ 53.Kxd4 Rd2+  0-1
+	// `
 	var a uint16 = 100
 	var w_x, w_y uint16 = 10 * a, 8 * a
 	var duration_of_premove_animation int = 0
@@ -58,8 +58,20 @@ func main() {
 	var ending_premoves bool = true
 	var piece_is_selected uint16 = 64
 
-	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward := initialize(w_x, w_y, a, false)
+	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, moves_a := initialize(w_x, w_y, a, false)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
+
+	// temp := pieces.Copy_Array(pieces_a)
+	// aa := &pieces_a[0]
+	// bb := &temp[0]
+	// fmt.Printf("Type of x: %T\n", aa)
+	// fmt.Printf("Type of x: %T\n", bb)
+	// fmt.Println(*aa, *bb)
+	// if fmt.Sprintf(string(aa)) == fmt.Sprintf(bb) {
+	// 	fmt.Println("hello")
+	// } else {
+	// 	fmt.Println("nope")
+	// }
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
@@ -68,6 +80,10 @@ func main() {
 
 		if player_change {
 
+			if int(moves_counter) == len(moves_a) {
+				moves_a = append_moves_array(moves_a, pieces_a)
+			}
+			fmt.Println(len(moves_a))
 			restart = false
 			player_change = false
 			white_is_current_player, current_king_index = change_player(white_is_current_player, white_king_index, black_king_index)
@@ -83,11 +99,11 @@ func main() {
 			if checkmate && check {
 				game_end_visual(0, a, white_is_current_player)
 				gfx.TastaturLesen1()
-				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change = restart_game(w_x, w_y, a, one_move_back, one_move_forward)
+				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a = restart_game(w_x, w_y, a, one_move_back, one_move_forward)
 			} else if checkmate {
 				game_end_visual(1, a, white_is_current_player)
 				gfx.TastaturLesen1()
-				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change = restart_game(w_x, w_y, a, one_move_back, one_move_forward)
+				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a = restart_game(w_x, w_y, a, one_move_back, one_move_forward)
 			}
 
 		}
@@ -123,9 +139,21 @@ func main() {
 
 			if status == 1 && button == 1 {
 				if one_move_back.Is_Clicked(m_x, m_y) {
-					fmt.Println("back")
+					if moves_counter >= 2 {
+						moves_counter = moves_counter - 2
+						pieces_a = moves_a[moves_counter]
+						player_change = true
+					} else {
+						fmt.Println("first move has been reached")
+					}
 				} else if one_move_forward.Is_Clicked(m_x, m_y) {
-					fmt.Println("forward")
+					if int(moves_counter) < len(moves_a) {
+						fmt.Println(moves_counter, len(moves_a))
+						pieces_a = moves_a[moves_counter]
+						player_change = true
+					} else {
+						fmt.Println("last move has been reached")
+					}
 				} else {
 
 					current_field = calc_field(a, m_x, m_y, 0)
@@ -169,7 +197,7 @@ func main() {
 					}
 				}
 			} else if status == 0 && button == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player {
-				//wenn die maustaste gehalten wird, wird ein ghosttpiece gemalt, welches der maus folgt 
+				//wenn die maustaste gehalten wird, wird ein ghosttpiece gemalt, welches der maus folgt
 				dragging = true
 				pieces.Draw_To_Point(current_piece, w_x, w_y, a, m_x, m_y, -int16(a/2), -int16(a/2), 50)
 			}
@@ -177,8 +205,18 @@ func main() {
 	}
 }
 
+func array_one_is_equal_to_array_two(array_a [64]pieces.Piece, array_b [64]pieces.Piece) bool {
+	for i := 0; i < len(array_a); i++ {
+		if array_a[i] != array_b[i] {
+			fmt.Println(i)
+			return false
+		}
+	}
+	return true
+}
+
 func get_current_piece(pieces_a [64]pieces.Piece, current_field [2]uint16) (pieces.Piece, int) {
-	//gibt das 
+	//gibt das
 	var temp_current_piece pieces.Piece = nil
 	var piece_index int
 	for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
@@ -211,10 +249,10 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 	return pieces_a, piece_is_selected, false, promotion
 }
 
-func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Button) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool) {
-	pieces_a, white_king_index, black_king_index, _, _ := initialize(w_x, w_y, a, true)
+func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Button) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool, [][64]pieces.Piece) {
+	pieces_a, white_king_index, black_king_index, _, _, moves_a := initialize(w_x, w_y, a, true)
 
-	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true
+	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true, moves_a
 }
 
 func game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
@@ -329,9 +367,10 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 	return white_is_current_player, current_king_index
 }
 
-func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button) {
+func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, [][64]pieces.Piece) {
 	var one_move_back buttons.Button
 	var one_move_forward buttons.Button
+	var moves_a [][64]pieces.Piece
 
 	if !restart {
 		gfx.Fenster(w_x, w_y)
@@ -385,6 +424,8 @@ func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int, b
 	pieces_a[30] = pieces.NewKnight(6, 7, true)
 	pieces_a[31] = pieces.NewRook(7, 7, true)
 
+	//moves_a = append_moves_array(moves_a, pieces_a)
+
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
 			if king, ok := pieces_a[i].(*pieces.King); ok {
@@ -396,7 +437,7 @@ func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int, b
 			}
 		}
 	}
-	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward
+	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, moves_a
 }
 
 // func calc_a(w_x, w_y uint16) uint16 {
@@ -408,6 +449,11 @@ func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int, b
 // 	}
 // 	return a
 // }
+
+func append_moves_array(moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece) [][64]pieces.Piece {
+	moves_a = append(moves_a, pieces.Copy_Array(pieces_a))
+	return moves_a
+}
 
 func draw_pieces(pieces_a [64]pieces.Piece, w_x, w_y, a uint16) {
 	for i := 0; i < len(pieces_a); i++ {
