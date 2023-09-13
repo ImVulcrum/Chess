@@ -16,28 +16,30 @@ import (
 func main() {
 	fmt.Println("start game")
 	var premoves string = `
-		[Event "Open NOR-ch"]
-		[Site "Oslo NOR"]
-		[Date "2001.04.08"]
-		[Round "3"]
-		[White "Flores,R"]
-		[Black "Carlsen,M"]
-		[Result "0-1"]
-		[WhiteElo ""]
-		[BlackElo "2064"]
-		[ECO "B76"]
+	[Event "Open NOR-ch"]
+	[Site "Oslo NOR"]
+	[Date "2001.04.12"]
+	[Round "7"]
+	[White "Aarefjord,Christian"]
+	[Black "Carlsen,M"]
+	[Result "0-1"]
+	[WhiteElo ""]
+	[BlackElo "2064"]
+	[ECO "C55"]
 
-		1.e4 c5 2.Nf3 d6 3.d4 Nf6 4.Nc3 cxd4 5.Nxd4 g6 6.f3 Bg7 7.Be3 O-O 8.Qd2 Nc6
-		9.Nb3 Be6 10.Bh6 a5 11.Bxg7 Kxg7 12.g4 Ne5 13.Be2 Nc4 14.Bxc4 Bxc4 15.h4 a4
-		16.Nd4 e5 17.Ndb5 d5 18.g5 Nh5 19.exd5 Nf4 20.O-O-O Ra5 21.Na3 Bxd5 22.Nxd5 Rxd5
-		23.Qe3 Rxd1+ 24.Rxd1 Qc7 25.Qe4 Qc5 26.Qxb7 Ne2+ 27.Kd2 Qf2 28.Qc7 e4 29.fxe4 Re8
-		30.e5 Qd4+ 31.Ke1 Qe4 32.Kd2 Rxe5 33.c4 Qf4+ 34.Kc2 Nd4+ 35.Rxd4 Qxd4 36.Qxe5+ Qxe5
-		37.b4 Qe2+  0-1
+	1.e4 e5 2.Nf3 Nf6 3.Nc3 Nc6 4.Bc4 Bb4 5.d3 d5 6.exd5 Nxd5 7.Bd2 Nxc3 8.bxc3 Be7
+	9.Qe2 Bf6 10.O-O O-O 11.Rfe1 Re8 12.Qe4 g6 13.g4 Na5 14.Bb3 Nxb3 15.axb3 Bd7
+	16.g5 Bc6 17.Qh4 Bg7 18.Qg4 Qd6 19.Re2 Re6 20.Rae1 Rae8 21.c4 b6 22.Bc1 Ba8
+	23.Nd2 Bc6 24.Ne4 Qe7 25.Re3 h5 26.Qg3 Bd7 27.Bb2 Bc6 28.Nf6+ Bxf6 29.gxf6 Qxf6
+	30.Rxe5 Rxe5 31.Rxe5 Rd8 32.Qe3 Qh4 33.Qg5 Qxg5+ 34.Rxg5 Re8 35.Kf1 Bf3 36.Re5 Rd8
+	37.Ke1 Kf8 38.Ba3+ Kg8 39.Re7 Rc8 40.Kd2 h4 41.Ke3 Bh5 42.Kd2 g5 43.Rd7 g4
+	44.Re7 Kg7 45.Ke3 Kf6 46.d4 c5 47.Rxa7 Re8+ 48.Kd2 cxd4 49.Rd7 g3 50.fxg3 Re2+
+	51.Kd3 Rxh2 52.gxh4 Bg6+ 53.Kxd4 Rd2+  0-1
 		`
 	var a uint16 = 100
 	var w_x, w_y uint16 = 10 * a, 8 * a
-	var duration_of_premove_animation int = 1
-	var deselect_piece_after_clicking = true
+	var duration_of_premove_animation int = 0
+	var deselect_piece_after_clicking = false
 
 	var white_is_current_player bool
 	var player_change bool = true
@@ -90,7 +92,7 @@ func main() {
 
 		}
 
-		if len(premoves_array) > 0 {
+		if len(premoves_array) > 0 { //if there are premoves the program premoves
 			var promotion uint16 = 0
 			fmt.Println("premove:", premoves_array[0])
 			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index)
@@ -141,7 +143,8 @@ func main() {
 						//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
 						pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
 
-						//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, auf das bereits ausgewählte Piece nocheinmal geklickt wurde oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
+						//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
+						//mit der Option deselect_piece_after_clicking kann eingestellt werde, ob auch deselected werden soll wenn auf dasslebe piece nocheinmal geklickt wurde
 						if (temp_current_piece == nil) || (temp_current_piece != nil && (temp_current_piece.Give_Pos() == current_piece.Give_Pos() || temp_current_piece.Is_White_Piece() != white_is_current_player)) {
 							current_piece = nil
 							draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
@@ -158,7 +161,7 @@ func main() {
 					//überprüfen ob in current legal moves
 					pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
 
-					//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde oder auf ein generisches Piece geklickt wurde
+					//Deselect sobald ein Piece ausgewählt ist: wenn auf keinem Piece losgelassen wurde oder auf ein generisches Piece losgelassen wurde oder wenn auf einem eigenen piece losgelassen wurde
 					if (temp_current_piece == nil) || (temp_current_piece != nil && ((temp_current_piece.Is_White_Piece() != white_is_current_player) || (temp_current_piece.Is_White_Piece() == white_is_current_player && temp_current_piece.Give_Pos() != current_piece.Give_Pos()))) {
 						current_piece = nil
 						draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
@@ -166,6 +169,7 @@ func main() {
 					}
 				}
 			} else if status == 0 && button == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player {
+				//wenn die maustaste gehalten wird, wird ein ghosttpiece gemalt, welches der maus folgt 
 				dragging = true
 				pieces.Draw_To_Point(current_piece, w_x, w_y, a, m_x, m_y, -int16(a/2), -int16(a/2), 50)
 			}
@@ -174,6 +178,7 @@ func main() {
 }
 
 func get_current_piece(pieces_a [64]pieces.Piece, current_field [2]uint16) (pieces.Piece, int) {
+	//gibt das 
 	var temp_current_piece pieces.Piece = nil
 	var piece_index int
 	for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
