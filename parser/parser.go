@@ -134,8 +134,7 @@ func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, 
 			}
 		}
 	}
-	fmt.Println("Error in Parser: there is no piece is the pieces array that matches the specifications given")
-	return 64, 0
+	panic("Error in Parser: there is no piece is the pieces array that matches the specifications given, which means that the given pgn file is corrupted")
 }
 
 func Translate_PGN_Field_Notation(cord_string string) (uint16, bool) {

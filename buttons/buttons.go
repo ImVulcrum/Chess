@@ -1,7 +1,6 @@
 package buttons
 
 import (
-	"fmt"
 	"time"
 
 	gfx "../gfxw"
@@ -41,7 +40,6 @@ func New(x uint16, y uint16, length uint16, height uint16, name string, r, g, b,
 
 func (b *Button) Draw() {
 	gfx.SetzeFont("./resources/fonts/firamono.ttf", int(((*b).Height/15)*10))
-	fmt.Println("in drawing")
 	gfx.Stiftfarbe(b.R, b.G, b.B)
 	gfx.Vollrechteck((*b).X, (*b).Y, (*b).Length, (*b).Height)
 	gfx.Stiftfarbe(b.R_Label, b.G_Label, b.B_Label)
