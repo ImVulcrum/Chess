@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"gfxw"
+	"time"
 )
 
 func main() {
@@ -18,7 +19,11 @@ func main() {
 		case data := <-channel:
 			fmt.Println(data)
 
+		default:
+			fmt.Println("----")
+
 		}
+		time.Sleep(50 * time.Millisecond)
 		fmt.Println("hellooooo")
 	}
 }

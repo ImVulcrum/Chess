@@ -45,6 +45,8 @@ func main() {
 	var ending_premoves bool = true
 	var piece_is_selected uint16 = 64
 
+	m_channel := make(chan [4]int16, 10)
+
 	var premoves string
 	if use_clipboard_as_premoves {
 		err := clipboard.Init()
@@ -58,6 +60,8 @@ func main() {
 
 	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, moves_a := initialize(w_x, w_y, a, false)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
+
+	go mouse_handler(m_channel)
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
@@ -134,88 +138,92 @@ func main() {
 		}
 
 		if there_are_no_premoves && !restart {
-			button, status, m_x, m_y := gfx.MausLesen1()
+			select {
+			case mouse_input := <-m_channel:
 
-			if dragging && !(button == 1 && status == 0) {
-				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
-				dragging = false
-			}
+				if dragging && !(mouse_input[0] == 1 && mouse_input[1] == 0) {
+					draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
+					dragging = false
+				}
 
-			if status == 1 && button == 1 {
-				if one_move_back.Is_Clicked(m_x, m_y) {
-					if moves_counter >= 2 {
-						moves_counter = moves_counter - 2
-						pieces_a = pieces.Copy_Array(moves_a[moves_counter])
-						player_change = true
+				if mouse_input[0] == 1 && mouse_input[1] == 1 {
+					if one_move_back.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
+						if moves_counter >= 2 {
+							moves_counter = moves_counter - 2
+							pieces_a = pieces.Copy_Array(moves_a[moves_counter])
+							player_change = true
+						} else {
+							fmt.Println("first move has been reached")
+						}
+					} else if one_move_forward.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
+						if int(moves_counter) < len(moves_a) {
+							//fmt.Println(moves_counter, len(moves_a))
+							pieces_a = pieces.Copy_Array(moves_a[moves_counter])
+							player_change = true
+						} else {
+							fmt.Println("last move has been reached")
+						}
 					} else {
-						fmt.Println("first move has been reached")
+
+						current_field = calc_field(a, uint16(mouse_input[2]), uint16(mouse_input[3]), 0)
+						temp_current_piece, piece_index = get_current_piece(pieces_a, current_field)
+
+						//auswählen eines pieces
+						if temp_current_piece != nil && temp_current_piece.Is_White_Piece() == white_is_current_player && (!deselect_piece_after_clicking || (current_piece == nil || temp_current_piece.Give_Pos() != current_piece.Give_Pos())) {
+							current_piece = temp_current_piece
+							current_legal_moves = current_piece.Give_Legal_Moves()
+							promotion = 0
+							draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
+							piece_is_selected = uint16(piece_index)
+
+						} else if piece_is_selected != 64 {
+							//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
+							pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
+
+							//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
+							//mit der Option deselect_piece_after_clicking kann eingestellt werde, ob auch deselected werden soll wenn auf dasslebe piece nocheinmal geklickt wurde
+							if (temp_current_piece == nil) || (temp_current_piece != nil && (temp_current_piece.Give_Pos() == current_piece.Give_Pos() || temp_current_piece.Is_White_Piece() != white_is_current_player)) {
+								current_piece = nil
+								draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+								piece_is_selected = 64
+							}
+						}
 					}
-				} else if one_move_forward.Is_Clicked(m_x, m_y) {
-					if int(moves_counter) < len(moves_a) {
-						//fmt.Println(moves_counter, len(moves_a))
-						pieces_a = pieces.Copy_Array(moves_a[moves_counter])
-						player_change = true
-					} else {
-						fmt.Println("last move has been reached")
-					}
-				} else {
 
-					current_field = calc_field(a, m_x, m_y, 0)
-					temp_current_piece, piece_index = get_current_piece(pieces_a, current_field)
+				} else if mouse_input[1] == -1 && mouse_input[0] == 1 {
+					current_field = calc_field(a, uint16(mouse_input[2]), uint16(mouse_input[3]), 0)
+					temp_current_piece, _ = get_current_piece(pieces_a, current_field)
 
-					//auswählen eines pieces
-					if temp_current_piece != nil && temp_current_piece.Is_White_Piece() == white_is_current_player && (!deselect_piece_after_clicking || (current_piece == nil || temp_current_piece.Give_Pos() != current_piece.Give_Pos())) {
-						current_piece = temp_current_piece
-						current_legal_moves = current_piece.Give_Legal_Moves()
-						promotion = 0
-						draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
-						piece_is_selected = uint16(piece_index)
-
-					} else if piece_is_selected != 64 {
-						//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
+					if piece_is_selected != 64 {
+						//überprüfen ob in current legal moves
 						pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
 
-						//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
-						//mit der Option deselect_piece_after_clicking kann eingestellt werde, ob auch deselected werden soll wenn auf dasslebe piece nocheinmal geklickt wurde
-						if (temp_current_piece == nil) || (temp_current_piece != nil && (temp_current_piece.Give_Pos() == current_piece.Give_Pos() || temp_current_piece.Is_White_Piece() != white_is_current_player)) {
+						//Deselect sobald ein Piece ausgewählt ist: wenn auf keinem Piece losgelassen wurde oder auf ein generisches Piece losgelassen wurde oder wenn auf einem eigenen piece losgelassen wurde
+						if (temp_current_piece == nil) || (temp_current_piece != nil && ((temp_current_piece.Is_White_Piece() != white_is_current_player) || (temp_current_piece.Is_White_Piece() == white_is_current_player && temp_current_piece.Give_Pos() != current_piece.Give_Pos()))) {
 							current_piece = nil
 							draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 							piece_is_selected = 64
 						}
 					}
+				} else if mouse_input[1] == 0 && mouse_input[0] == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player {
+					//wenn die maustaste gehalten wird, wird ein ghosttpiece gemalt, welches der maus folgt
+					dragging = true
+					pieces.Draw_To_Point(current_piece, w_x, w_y, a, uint16(mouse_input[2]), uint16(mouse_input[3]), -int16(a/2), -int16(a/2), 50)
 				}
 
-			} else if status == -1 && button == 1 {
-				current_field = calc_field(a, m_x, m_y, 0)
-				temp_current_piece, _ = get_current_piece(pieces_a, current_field)
-
-				if piece_is_selected != 64 {
-					//überprüfen ob in current legal moves
-					pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
-
-					//Deselect sobald ein Piece ausgewählt ist: wenn auf keinem Piece losgelassen wurde oder auf ein generisches Piece losgelassen wurde oder wenn auf einem eigenen piece losgelassen wurde
-					if (temp_current_piece == nil) || (temp_current_piece != nil && ((temp_current_piece.Is_White_Piece() != white_is_current_player) || (temp_current_piece.Is_White_Piece() == white_is_current_player && temp_current_piece.Give_Pos() != current_piece.Give_Pos()))) {
-						current_piece = nil
-						draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-						piece_is_selected = 64
-					}
-				}
-			} else if status == 0 && button == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player {
-				//wenn die maustaste gehalten wird, wird ein ghosttpiece gemalt, welches der maus folgt
-				dragging = true
-				pieces.Draw_To_Point(current_piece, w_x, w_y, a, m_x, m_y, -int16(a/2), -int16(a/2), 50)
+			default:
+				time.Sleep(10 * time.Millisecond)
 			}
-
 			draw_timers(*white_time_counter, *black_time_counter, a)
 		}
 	}
 }
 
-func mouse_handler(m_channel chan [4]uint16) {
+func mouse_handler(m_channel chan [4]int16) {
 	for {
 		button, status, m_x, m_y := gfx.MausLesen1()
 		if !(button == 0 && status == 0) {
-			m_channel <- [4]uint16{uint16(button), uint16(status), m_x, m_y}
+			m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)}
 		}
 	}
 }
