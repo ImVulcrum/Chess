@@ -48,6 +48,7 @@ func (b *Button) Draw() {
 
 func (b *Button) Is_Clicked(x, y uint16) bool {
 	if x >= b.X && x <= b.X+b.Length && y >= b.Y && y <= b.Y+b.Height {
+		gfx.SetzeFont("./resources/fonts/firamono.ttf", int(((*b).Height/15)*10))
 		gfx.Stiftfarbe(0, 0, 0)
 		gfx.Transparenz(120)
 		gfx.Vollrechteck((*b).X, (*b).Y, (*b).Length, (*b).Height)

@@ -12,18 +12,23 @@ import (
 	"./imaging"
 	"./parser"
 	"./pieces"
+	"./time_counter"
 )
 
 func main() {
+
 	fmt.Println("start game")
 	var use_clipboard_as_premoves = false
 	var a uint16 = 100
 	var w_x, w_y uint16 = 10 * a, 8 * a
 	var duration_of_premove_animation int = 0
 	var deselect_piece_after_clicking = false
-	var game_history_can_be_changed = false
+	var game_history_can_be_changed = true
+	var game_timer int64 = 62000
 
-	var white_is_current_player bool
+	white_time_counter := time_counter.New(game_timer)
+	black_time_counter := time_counter.New(game_timer)
+	var white_is_current_player bool = false
 	var player_change bool = true
 	var current_king_index int
 	var checkmate bool
@@ -73,7 +78,6 @@ func main() {
 				}
 			}
 
-			//fmt.Println(len(moves_a))
 			restart = false
 			player_change = false
 			white_is_current_player, current_king_index = change_player(white_is_current_player, white_king_index, black_king_index)
@@ -96,6 +100,18 @@ func main() {
 				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a = restart_game(w_x, w_y, a, one_move_back, one_move_forward)
 			}
 
+			fmt.Println("dgdfhgfdg")
+			if white_is_current_player {
+				fmt.Println("hello ther")
+				black_time_counter.Stop_Counting()
+				white_time_counter.Init_Counting()
+
+			} else if !white_is_current_player {
+				fmt.Println("hefofohdo")
+				white_time_counter.Stop_Counting()
+				black_time_counter.Init_Counting()
+			}
+			fmt.Println(black_time_counter.Return_Current_Counter())
 		}
 
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
@@ -189,8 +205,32 @@ func main() {
 				dragging = true
 				pieces.Draw_To_Point(current_piece, w_x, w_y, a, m_x, m_y, -int16(a/2), -int16(a/2), 50)
 			}
+
+			draw_timers(*white_time_counter, *black_time_counter, a)
 		}
 	}
+}
+
+func mouse_handler(m_channel chan [4]uint16) {
+	for {
+		button, status, m_x, m_y := gfx.MausLesen1()
+		if !(button == 0 && status == 0) {
+			m_channel <- [4]uint16{uint16(button), uint16(status), m_x, m_y}
+		}
+	}
+}
+
+func draw_timers(white_time_counter, black_time_counter time_counter.Time_Counter, a uint16) {
+	gfx.SetzeFont("./resources/fonts/firamono.ttf", int(a/4))
+
+	gfx.UpdateAus()
+	gfx.Stiftfarbe(31, 31, 31)
+	gfx.Vollrechteck(8*a, 6*a, 2*a, a)
+	gfx.Stiftfarbe(255, 255, 255)
+	gfx.SchreibeFont(8*a, 6*a, white_time_counter.Return_Current_Counter())
+	gfx.SchreibeFont(9*a, 6*a, black_time_counter.Return_Current_Counter())
+	gfx.UpdateAn()
+
 }
 
 func array_one_is_equal_to_array_two(array_a [64]pieces.Piece, array_b [64]pieces.Piece) bool {
@@ -378,9 +418,9 @@ func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int, b
 	draw_background(a)
 
 	gfx.Stiftfarbe(124, 119, 111)
-	gfx.Vollrechteck(8*a+a/10, a/10, a, 7*a-a/5)
+	gfx.Vollrechteck(8*a+a/10, a/10, a, 6*a-a/5)
 	gfx.Stiftfarbe(22, 21, 20)
-	gfx.Vollrechteck(9*a, a/10, a-a/10, 7*a-a/5)
+	gfx.Vollrechteck(9*a, a/10, a-a/10, 6*a-a/5)
 
 	var pieces_a [64]pieces.Piece
 	var white_king_index int = -1
