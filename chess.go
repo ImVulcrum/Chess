@@ -24,10 +24,8 @@ func main() {
 	var duration_of_premove_animation int = 0
 	var deselect_piece_after_clicking = false
 	var game_history_can_be_changed = true
-	var game_timer int64 = 62000
+	var game_timer int64 = 5000
 
-	white_time_counter := time_counter.New(game_timer)
-	black_time_counter := time_counter.New(game_timer)
 	var white_is_current_player bool = false
 	var player_change bool = true
 	var current_king_index int
@@ -44,6 +42,7 @@ func main() {
 	var dragging bool
 	var ending_premoves bool = true
 	var piece_is_selected uint16 = 64
+	var white_counter, black_counter int64
 
 	m_channel := make(chan [4]int16, 10)
 
@@ -58,7 +57,7 @@ func main() {
 		premoves = ""
 	}
 
-	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, moves_a := initialize(w_x, w_y, a, false)
+	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, false, game_timer)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
 
 	go mouse_handler(m_channel)
@@ -97,25 +96,21 @@ func main() {
 			if checkmate && check {
 				game_end_visual(0, a, white_is_current_player)
 				gfx.TastaturLesen1()
-				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a = restart_game(w_x, w_y, a, one_move_back, one_move_forward)
+				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
 			} else if checkmate {
 				game_end_visual(1, a, white_is_current_player)
 				gfx.TastaturLesen1()
-				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a = restart_game(w_x, w_y, a, one_move_back, one_move_forward)
+				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
 			}
 
-			fmt.Println("dgdfhgfdg")
 			if white_is_current_player {
-				fmt.Println("hello ther")
 				black_time_counter.Stop_Counting()
 				white_time_counter.Init_Counting()
 
 			} else if !white_is_current_player {
-				fmt.Println("hefofohdo")
 				white_time_counter.Stop_Counting()
 				black_time_counter.Init_Counting()
 			}
-			fmt.Println(black_time_counter.Return_Current_Counter())
 		}
 
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
@@ -214,7 +209,14 @@ func main() {
 			default:
 				time.Sleep(10 * time.Millisecond)
 			}
-			draw_timers(*white_time_counter, *black_time_counter, a)
+
+			white_counter, black_counter = draw_timers(*white_time_counter, *black_time_counter, a)
+
+			if (white_is_current_player && white_counter <= 0) || (!white_is_current_player && black_counter <= 0) {
+				game_end_visual(0, a, white_is_current_player)
+				gfx.TastaturLesen1()
+				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
+			}
 		}
 	}
 }
@@ -228,17 +230,21 @@ func mouse_handler(m_channel chan [4]int16) {
 	}
 }
 
-func draw_timers(white_time_counter, black_time_counter time_counter.Time_Counter, a uint16) {
+func draw_timers(white_time_counter, black_time_counter time_counter.Time_Counter, a uint16) (int64, int64) {
 	gfx.SetzeFont("./resources/fonts/firamono.ttf", int(a/4))
 
 	gfx.UpdateAus()
 	gfx.Stiftfarbe(31, 31, 31)
 	gfx.Vollrechteck(8*a, 6*a, 2*a, a)
 	gfx.Stiftfarbe(255, 255, 255)
-	gfx.SchreibeFont(8*a, 6*a, white_time_counter.Return_Current_Counter())
-	gfx.SchreibeFont(9*a, 6*a, black_time_counter.Return_Current_Counter())
+	white_string, white_int := white_time_counter.Return_Current_Counter()
+	black_string, black_int := black_time_counter.Return_Current_Counter()
+	black_time_counter.Return_Current_Counter()
+	gfx.SchreibeFont(8*a, 6*a, white_string)
+	gfx.SchreibeFont(9*a, 6*a, black_string)
 	gfx.UpdateAn()
 
+	return white_int, black_int
 }
 
 func array_one_is_equal_to_array_two(array_a [64]pieces.Piece, array_b [64]pieces.Piece) bool {
@@ -285,10 +291,10 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 	return pieces_a, piece_is_selected, false, promotion
 }
 
-func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Button) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool, [][64]pieces.Piece) {
-	pieces_a, white_king_index, black_king_index, _, _, moves_a := initialize(w_x, w_y, a, true)
+func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Button, game_timer int64) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool, [][64]pieces.Piece, *time_counter.Time_Counter, *time_counter.Time_Counter) {
+	pieces_a, white_king_index, black_king_index, _, _, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, true, game_timer)
 
-	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true, moves_a
+	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true, moves_a, white_time_counter, black_time_counter
 }
 
 func game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
@@ -403,7 +409,7 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 	return white_is_current_player, current_king_index
 }
 
-func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, [][64]pieces.Piece) {
+func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, [][64]pieces.Piece, *time_counter.Time_Counter, *time_counter.Time_Counter) {
 	var one_move_back buttons.Button
 	var one_move_forward buttons.Button
 	var moves_a [][64]pieces.Piece
@@ -473,7 +479,11 @@ func initialize(w_x, w_y, a uint16, restart bool) ([64]pieces.Piece, int, int, b
 			}
 		}
 	}
-	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, moves_a
+
+	white_time_counter := time_counter.New(game_timer)
+	black_time_counter := time_counter.New(game_timer)
+
+	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, moves_a, white_time_counter, black_time_counter
 }
 
 // func calc_a(w_x, w_y uint16) uint16 {
