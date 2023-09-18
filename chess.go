@@ -24,7 +24,7 @@ func main() {
 	var duration_of_premove_animation int = 0
 	var deselect_piece_after_clicking = false
 	var game_history_can_be_changed = true
-	var game_timer int64 = 5000
+	var game_timer int64 = 500000
 
 	var white_is_current_player bool = false
 	var player_change bool = true
@@ -42,7 +42,6 @@ func main() {
 	var dragging bool
 	var ending_premoves bool = true
 	var piece_is_selected uint16 = 64
-	var white_counter, black_counter int64
 
 	m_channel := make(chan [4]int16, 10)
 
@@ -203,16 +202,14 @@ func main() {
 				} else if mouse_input[1] == 0 && mouse_input[0] == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player {
 					//wenn die maustaste gehalten wird, wird ein ghosttpiece gemalt, welches der maus folgt
 					dragging = true
-					pieces.Draw_To_Point(current_piece, w_x, w_y, a, uint16(mouse_input[2]), uint16(mouse_input[3]), -int16(a/2), -int16(a/2), 50)
+					pieces.Draw_To_Point(current_piece, w_x, w_y, a, uint16(mouse_input[2]), uint16(mouse_input[3]), -int16(a/2), -int16(a/2), 50, uint16(mouse_input[2]))
 				}
 
 			default:
 				time.Sleep(10 * time.Millisecond)
 			}
-
-			white_counter, black_counter = draw_timers(*white_time_counter, *black_time_counter, a)
-
-			if (white_is_current_player && white_counter <= 0) || (!white_is_current_player && black_counter <= 0) {
+			fmt.Println(white_time_counter.Return_Current_Counter())
+			if draw_timers(*white_time_counter, *black_time_counter, a) {
 				game_end_visual(0, a, white_is_current_player)
 				gfx.TastaturLesen1()
 				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
@@ -230,21 +227,25 @@ func mouse_handler(m_channel chan [4]int16) {
 	}
 }
 
-func draw_timers(white_time_counter, black_time_counter time_counter.Time_Counter, a uint16) (int64, int64) {
+func draw_timers(white_time_counter, black_time_counter time_counter.Time_Counter, a uint16) bool {
 	gfx.SetzeFont("./resources/fonts/firamono.ttf", int(a/4))
 
 	gfx.UpdateAus()
 	gfx.Stiftfarbe(31, 31, 31)
 	gfx.Vollrechteck(8*a, 6*a, 2*a, a)
 	gfx.Stiftfarbe(255, 255, 255)
-	white_string, white_int := white_time_counter.Return_Current_Counter()
-	black_string, black_int := black_time_counter.Return_Current_Counter()
+	white_string, white_has_no_time := white_time_counter.Return_Current_Counter()
+	black_string, black_has_no_time := black_time_counter.Return_Current_Counter()
 	black_time_counter.Return_Current_Counter()
 	gfx.SchreibeFont(8*a, 6*a, white_string)
 	gfx.SchreibeFont(9*a, 6*a, black_string)
 	gfx.UpdateAn()
 
-	return white_int, black_int
+	if white_has_no_time || black_has_no_time {
+		return true
+	} else {
+		return false
+	}
 }
 
 func array_one_is_equal_to_array_two(array_a [64]pieces.Piece, array_b [64]pieces.Piece) bool {
@@ -346,10 +347,10 @@ func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piec
 		gfx.Stiftfarbe(221, 221, 221)
 		gfx.Vollrechteck((2 * a), (4*a)-(5*a)/10, 4*a, a)
 
-		pieces.Draw_To_Point(queen, w_x, w_y, a, (2 * a), (4*a)-(5*a)/10, 0, 0, 0)
-		pieces.Draw_To_Point(knight, w_x, w_y, a, (3 * a), (4*a)-(5*a)/10, 0, 0, 0)
-		pieces.Draw_To_Point(rook, w_x, w_y, a, (4 * a), (4*a)-(5*a)/10, 0, 0, 0)
-		pieces.Draw_To_Point(bishop, w_x, w_y, a, (5 * a), (4*a)-(5*a)/10, 0, 0, 0)
+		pieces.Draw_To_Point(queen, w_x, w_y, a, (2 * a), (4*a)-(5*a)/10, 0, 0, 0, 0)
+		pieces.Draw_To_Point(knight, w_x, w_y, a, (3 * a), (4*a)-(5*a)/10, 0, 0, 0, 0)
+		pieces.Draw_To_Point(rook, w_x, w_y, a, (4 * a), (4*a)-(5*a)/10, 0, 0, 0, 0)
+		pieces.Draw_To_Point(bishop, w_x, w_y, a, (5 * a), (4*a)-(5*a)/10, 0, 0, 0, 0)
 		for {
 			button, status, m_x, m_y := gfx.MausLesen1()
 			if button == 1 && status == 1 && m_x >= 2*a && m_x <= 6*a && m_y >= (4*a)-(5*a)/10 && m_y <= (4*a)+(5*a)/10 {

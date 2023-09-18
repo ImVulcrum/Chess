@@ -22,7 +22,7 @@ func (c *Time_Counter) Init_Counting() {
 	(*c).marker_time = time.Now().UnixMilli()
 }
 
-func (c *Time_Counter) Return_Current_Counter() (string, int64) {
+func (c *Time_Counter) Return_Current_Counter() (string, bool) {
 	var current_time = time.Now().UnixMilli()
 
 	var returntime int64
@@ -35,7 +35,11 @@ func (c *Time_Counter) Return_Current_Counter() (string, int64) {
 	} else {
 		returntime = (*c).time_in_ms
 	}
-	return convert_time_in_ms_to_string(returntime), returntime
+
+	if returntime <= 0 {
+		return "00:00", true
+	}
+	return convert_time_in_ms_to_string(returntime), false
 }
 
 func (c *Time_Counter) Stop_Counting() {

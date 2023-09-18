@@ -34,19 +34,24 @@ func Draw(piece Piece, w_x, w_y, a uint16) {
 	Copy_Piece_To_Clipboard(piece, w_x, w_y, a)
 }
 
-func Draw_To_Point(piece Piece, w_x, w_y, a, x, y uint16, x_offset, y_offset int16, transparencey uint8) {
+func Draw_To_Point(piece Piece, w_x, w_y, a, x, y uint16, x_offset, y_offset int16, transparencey uint8, m_x uint16) {
 
 	if transparencey == 0 {
 		gfx.Archivieren()
 	}
 
+	if m_x >= 75*a/10 {
+		x_offset = 0
+		x = 70 * a / 10
+	}
+
 	gfx.UpdateAus()
 
-	gfx.Restaurieren(0, 0, w_x, w_y)
+	gfx.Restaurieren(0, 0, 8*a, w_y)
 
 	gfx.Archivieren()
 	Copy_Piece_To_Clipboard(piece, w_x, w_y, a)
-	gfx.Restaurieren(0, 0, w_x, w_y)
+	gfx.Restaurieren(0, 0, 8*a, w_y)
 
 	gfx.Archivieren()
 
