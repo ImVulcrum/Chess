@@ -5,24 +5,24 @@ import (
 	"time"
 )
 
-type Time_Counter struct {
+type t_counter struct {
 	time_in_ms  int64
 	marker_time int64
 }
 
-func New(starting_time int64) *Time_Counter {
-	var c *Time_Counter = new(Time_Counter)
-	(*c).time_in_ms = starting_time
-	(*c).marker_time = 0
+func New(starting_time int64) *t_counter {
+	var c *t_counter = new(t_counter)
+	c.time_in_ms = starting_time
+	c.marker_time = 0
 
 	return c
 }
 
-func (c *Time_Counter) Init_Counting() {
-	(*c).marker_time = time.Now().UnixMilli()
+func (c *t_counter) Init_Counting() {
+	c.marker_time = time.Now().UnixMilli()
 }
 
-func (c *Time_Counter) Return_Current_Counter() (string, bool) {
+func (c *t_counter) Return_Current_Counter() (string, bool) {
 	var current_time = time.Now().UnixMilli()
 
 	var returntime int64
@@ -42,12 +42,12 @@ func (c *Time_Counter) Return_Current_Counter() (string, bool) {
 	return convert_time_in_ms_to_string(returntime), false
 }
 
-func (c *Time_Counter) Stop_Counting() {
+func (c *t_counter) Stop_Counting() {
 	var current_time = time.Now().UnixMilli()
-	if (*c).marker_time != 0 {
-		(*c).time_in_ms = (*c).time_in_ms - (current_time - (*c).marker_time)
+	if c.marker_time != 0 {
+		c.time_in_ms = c.time_in_ms - (current_time - c.marker_time)
 	}
-	(*c).marker_time = 0
+	c.marker_time = 0
 }
 
 func convert_time_in_ms_to_string(time_remaining int64) string {
