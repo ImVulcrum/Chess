@@ -27,7 +27,7 @@ func main() {
 	var duration_of_premove_animation int = 0
 	var deselect_piece_after_clicking = false
 	var game_history_can_be_changed = true
-	var game_timer int64 = 50000
+	var game_timer int64 = 5000
 
 	var white_is_current_player bool = false
 	var player_change bool = true
@@ -46,7 +46,7 @@ func main() {
 	var ending_premoves bool = true
 	var piece_is_selected uint16 = 64
 
-	m_channel := make(chan [4]int16, 10)
+	m_channel := make(chan [4]int16, 1)
 
 	var premoves string
 	if use_clipboard_as_premoves {
@@ -100,13 +100,23 @@ func main() {
 			if checkmate && check {
 				game_end_visual(0, a, white_is_current_player)
 				gfx.TastaturLesen1()
-				dragging = false
-				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
+				
+				restart_window = true
+				goto restart_marker
+				
+				//~ pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
+				//~ dragging = false
+				//~ empty_channel(m_channel)
 			} else if checkmate {
 				game_end_visual(1, a, white_is_current_player)
 				gfx.TastaturLesen1()
-				dragging = false
-				pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
+				
+				restart_window = true
+				goto restart_marker
+				
+				//~ pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
+				//~ dragging = false
+				//~ empty_channel(m_channel)
 			}
 
 			if white_is_current_player {
@@ -142,7 +152,7 @@ func main() {
 			select {
 			case mouse_input := <-m_channel:
 
-				if dragging && !(mouse_input[0] == 1 && mouse_input[1] == 0) {
+				if dragging && !(mouse_input[0] == 1 && mouse_input[1] == 0) { //wenn nichts gehalten wird dann löschen
 					draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
 					dragging = false
 				}
@@ -213,18 +223,18 @@ func main() {
 				}
 
 			default:
-				time.Sleep(50 * time.Millisecond)
+				time.Sleep(5 * time.Millisecond)
 			}
 			if draw_timers(white_time_counter, black_time_counter, a) {
 				game_end_visual(0, a, white_is_current_player)
 				gfx.TastaturLesen1()
+				
 				restart_window = true
 				goto restart_marker
-				//game_end_visual(0, a, white_is_current_player)
-				//gfx.TastaturLesen1()
-				//pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
-				//dragging = false
-				//empty_channel(m_channel)
+				
+				//~ pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
+				//~ dragging = false
+				//~ empty_channel(m_channel)
 			}
 		}
 	}
@@ -234,7 +244,12 @@ func mouse_handler(m_channel chan [4]int16) {
 	for {
 		button, status, m_x, m_y := gfx.MausLesen1()
 		if !(button == 0 && status == 0) {
-			m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)}
+			select {
+				case _ = <- m_channel:	//stellt sicher dass leer ist
+					m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)} //schreibt nur wenn leer ist
+				default:
+					m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)}
+				}
 		}
 	}
 }
@@ -316,6 +331,7 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 }
 
 func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Button, game_timer int64) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
+	//this restart function works in parts, the problem is that it does not clear the current piece, which means a piece is technicly already selected after restarting, it seems like clearing the channel is not needed
 	pieces_a, white_king_index, black_king_index, _, _, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, true, game_timer)
 
 	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true, moves_a, white_time_counter, black_time_counter
