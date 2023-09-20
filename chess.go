@@ -21,14 +21,16 @@ func main() {
 	
 	restart_marker:
 	
+	
 	var use_clipboard_as_premoves = false
 	var a uint16 = 100
 	var w_x, w_y uint16 = 10 * a, 8 * a
-	var duration_of_premove_animation int = 0
+	var duration_of_premove_animation int = 1
 	var deselect_piece_after_clicking = false
 	var game_history_can_be_changed = true
-	var game_timer int64 = 5000
+	var game_timer int64 = 500000
 
+	//~ var restart bool
 	var white_is_current_player bool = false
 	var player_change bool = true
 	var current_king_index int
@@ -40,32 +42,22 @@ func main() {
 	var current_legal_moves [][3]uint16
 	var moves_counter int16
 	var current_field [2]uint16
-	var there_are_no_premoves bool = false
-	var restart bool
 	var dragging bool
 	var ending_premoves bool = true
 	var piece_is_selected uint16 = 64
-
-	m_channel := make(chan [4]int16, 1)
-
-	var premoves string
-	if use_clipboard_as_premoves {
-		err := clipboard.Init()
-		if err != nil {
-			panic(err)
-		}
-		premoves = string(clipboard.Read(clipboard.FmtText))
-	} else {
-		premoves = ""
-	}
+	var premoves string = get_clipboard_if_asked(use_clipboard_as_premoves)
+	var promotion uint16 = 0
 
 	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, restart_window, game_timer)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
-	var promotion uint16 = 0
-	gfx.TastaturLesen1()
+	
+
+	display_message(2, a, false)
+
+	m_channel := make(chan [4]int16, 1)
 	go mouse_handler(m_channel)
 	
 	
@@ -85,7 +77,7 @@ func main() {
 				}
 			}
 
-			restart = false
+			//restart = false
 			player_change = false
 			white_is_current_player, current_king_index = change_player(white_is_current_player, white_king_index, black_king_index)
 			moves_counter++
@@ -93,14 +85,12 @@ func main() {
 
 			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)
 
-			if there_are_no_premoves || duration_of_premove_animation != 0 {
+			if !use_clipboard_as_premoves || duration_of_premove_animation != 0 { //wenn keine premoves mehr da sind oder premoves da sind und diese gezeichnet werden sollen
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			}
 
 			if checkmate && check {
-				game_end_visual(0, a, white_is_current_player)
-				gfx.TastaturLesen1()
-				
+				display_message(0, a, white_is_current_player)
 				restart_window = true
 				goto restart_marker
 				
@@ -108,15 +98,9 @@ func main() {
 				//~ dragging = false
 				//~ empty_channel(m_channel)
 			} else if checkmate {
-				game_end_visual(1, a, white_is_current_player)
-				gfx.TastaturLesen1()
-				
+				display_message(1, a, white_is_current_player)
 				restart_window = true
 				goto restart_marker
-				
-				//~ pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
-				//~ dragging = false
-				//~ empty_channel(m_channel)
 			}
 
 			if white_is_current_player {
@@ -141,14 +125,14 @@ func main() {
 
 			time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
 			player_change = true
-		} else if ending_premoves {
+		} else if ending_premoves { 	//sol im optimalfall nur einmal ausgeführt werden
 			draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-			there_are_no_premoves = true
+			use_clipboard_as_premoves = false
 			ending_premoves = false
 			fmt.Println("----- End of Premoves -----")
 		}
 
-		if there_are_no_premoves && !restart {
+		if !use_clipboard_as_premoves { //wenn die andere restart methode ausgeführt wird, dann sollt hier noch noch überprüft werden ob restart == false ist, da es sonst zu fehlern kommt
 			select {
 			case mouse_input := <-m_channel:
 
@@ -168,7 +152,6 @@ func main() {
 						}
 					} else if one_move_forward.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						if int(moves_counter) < len(moves_a) {
-							//fmt.Println(moves_counter, len(moves_a))
 							pieces_a = pieces.Copy_Array(moves_a[moves_counter])
 							player_change = true
 						} else {
@@ -226,15 +209,9 @@ func main() {
 				time.Sleep(5 * time.Millisecond)
 			}
 			if draw_timers(white_time_counter, black_time_counter, a) {
-				game_end_visual(0, a, white_is_current_player)
-				gfx.TastaturLesen1()
-				
+				display_message(0, a, white_is_current_player)
 				restart_window = true
 				goto restart_marker
-				
-				//~ pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
-				//~ dragging = false
-				//~ empty_channel(m_channel)
 			}
 		}
 	}
@@ -252,6 +229,21 @@ func mouse_handler(m_channel chan [4]int16) {
 				}
 		}
 	}
+}
+
+func get_clipboard_if_asked(use_clipboard bool) string {
+	var premoves string
+	
+	if use_clipboard {
+		err := clipboard.Init()
+		if err != nil {
+			panic(err)
+		}
+		premoves = string(clipboard.Read(clipboard.FmtText))
+	} else {
+		premoves = ""
+	}
+	return premoves
 }
 
 func draw_timers(white_time_counter, black_time_counter time_counter.Counter, a uint16) bool {
@@ -337,7 +329,7 @@ func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Bu
 	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true, moves_a, white_time_counter, black_time_counter
 }
 
-func game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
+func display_message(message_type uint8, a uint16, white_is_current_player bool) {
 
 	gfx.Stiftfarbe(0, 0, 0)
 	gfx.Transparenz(70)
@@ -349,7 +341,7 @@ func game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
 	gfx.Stiftfarbe(220, 220, 220)
 	gfx.SetzeFont("./resources/fonts/junegull.ttf", int(5*a/10))
 
-	if ending_var == 0 {
+	if message_type == 0 {
 		if !white_is_current_player {
 			gfx.SchreibeFont(18*a/10, 31*a/10, "player black has")
 		} else {
@@ -358,17 +350,24 @@ func game_end_visual(ending_var uint8, a uint16, white_is_current_player bool) {
 		gfx.Stiftfarbe(136, 8, 8)
 		gfx.SetzeFont("./resources/fonts/punk.ttf", int(a))
 		gfx.SchreibeFont(29*a/10, 37*a/10, "lost")
-	}
-
-	if ending_var == 1 {
+	} else if message_type == 1 {
 		gfx.SchreibeFont(295*a/100, 31*a/10, "That's a ")
 
 		gfx.Stiftfarbe(0, 143, 230)
 		gfx.SetzeFont("./resources/fonts/punk.ttf", int(a))
 		gfx.SchreibeFont(144*a/100, 37*a/10, "stalemate")
-	}
+		
+	} else if message_type == 2 {
+		gfx.SchreibeFont(180*a/100, 31*a/10, "Press any key to")
 
+		gfx.Stiftfarbe(28, 205, 60)
+		gfx.SetzeFont("./resources/fonts/punk.ttf", int(a))
+		gfx.SchreibeFont(260*a/100, 37*a/10, "star t")
+	}
+	
 	gfx.Transparenz(0)
+	gfx.UpdateAn()
+	gfx.TastaturLesen1()
 
 }
 
@@ -542,6 +541,7 @@ func append_moves_array(moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece) [
 }
 
 func draw_pieces(pieces_a [64]pieces.Piece, w_x, w_y, a uint16) {
+	gfx.UpdateAus()
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
 			gfx.Archivieren()
@@ -552,6 +552,7 @@ func draw_pieces(pieces_a [64]pieces.Piece, w_x, w_y, a uint16) {
 		}
 	}
 	gfx.Archivieren()
+	gfx.UpdateAn()
 }
 
 func highlight(a uint16, pos [2]uint16, r, g, b uint8) {
