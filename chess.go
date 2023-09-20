@@ -18,10 +18,9 @@ import (
 func main() {
 	fmt.Println("start game")
 	var restart_window bool = false
-	
-	restart_marker:
-	
-	
+
+restart_marker:
+
 	var use_clipboard_as_premoves = false
 	var a uint16 = 100
 	var w_x, w_y uint16 = 10 * a, 8 * a
@@ -53,14 +52,11 @@ func main() {
 
 	draw_pieces(pieces_a, w_x, w_y, a)
 
-	
-
 	display_message(2, a, false)
 
 	m_channel := make(chan [4]int16, 1)
 	go mouse_handler(m_channel)
-	
-	
+
 	for { //gameloop
 
 		if player_change {
@@ -78,27 +74,20 @@ func main() {
 			}
 
 			//restart = false
-			player_change = false
-			white_is_current_player, current_king_index = change_player(white_is_current_player, white_king_index, black_king_index)
-			moves_counter++
+			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter)
 			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)
-
 			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)
 
-			if !use_clipboard_as_premoves || duration_of_premove_animation != 0 { //wenn keine premoves mehr da sind oder premoves da sind und diese gezeichnet werden sollen
+			if !use_clipboard_as_premoves || duration_of_premove_animation != 0 { //wenn keine premoves mehr da sind oder premoves da sind und diese gezeichnet werden sollen dann wird das board gezeichnet
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			}
 
 			if checkmate && check {
-				display_message(0, a, white_is_current_player)
-				restart_window = true
-				goto restart_marker
-				
-				//~ pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
-				//~ dragging = false
-				//~ empty_channel(m_channel)
-			} else if checkmate {
-				display_message(1, a, white_is_current_player)
+				if check {
+					display_message(0, a, white_is_current_player)
+				} else {
+					display_message(1, a, white_is_current_player)
+				}
 				restart_window = true
 				goto restart_marker
 			}
@@ -119,13 +108,13 @@ func main() {
 			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index)
 			pieces_a, promotion = pieces.Move_Piece_To(pieces_a[piece_executing_move], pieces_a[piece_executing_move].Give_Legal_Moves()[index_of_move], moves_counter, pieces_a)
 			if promotion != 64 {
-				pieces_a = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to)
+				pieces_a, _ = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to, m_channel)
 			}
 			premoves_array = premoves_array[1:]
 
 			time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
 			player_change = true
-		} else if ending_premoves { 	//sol im optimalfall nur einmal ausgeführt werden
+		} else if ending_premoves { //soll im optimalfall nur einmal ausgeführt werden
 			draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			use_clipboard_as_premoves = false
 			ending_premoves = false
@@ -172,7 +161,7 @@ func main() {
 
 						} else if piece_is_selected != 64 {
 							//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
-							pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
+							pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
 
 							//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
 							//mit der Option deselect_piece_after_clicking kann eingestellt werde, ob auch deselected werden soll wenn auf dasslebe piece nocheinmal geklickt wurde
@@ -190,7 +179,7 @@ func main() {
 
 					if piece_is_selected != 64 {
 						//überprüfen ob in current legal moves
-						pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter)
+						pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
 
 						//Deselect sobald ein Piece ausgewählt ist: wenn auf keinem Piece losgelassen wurde oder auf ein generisches Piece losgelassen wurde oder wenn auf einem eigenen piece losgelassen wurde
 						if (temp_current_piece == nil) || (temp_current_piece != nil && ((temp_current_piece.Is_White_Piece() != white_is_current_player) || (temp_current_piece.Is_White_Piece() == white_is_current_player && temp_current_piece.Give_Pos() != current_piece.Give_Pos()))) {
@@ -222,18 +211,22 @@ func mouse_handler(m_channel chan [4]int16) {
 		button, status, m_x, m_y := gfx.MausLesen1()
 		if !(button == 0 && status == 0) {
 			select {
-				case _ = <- m_channel:	//stellt sicher dass leer ist
+			case temp := <-m_channel: //stellt sicher dass leer ist
+				if temp[0] == 1 && temp[1] == 1 { //wenn es ein klicken befehl ist, dann soll dieser nicht überschrieben werden, da es sonst zu bugs kommen kann und "verschluckt" wird, dass ein piece ausgewählt wurde
+					m_channel <- temp
+				} else {
 					m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)} //schreibt nur wenn leer ist
-				default:
-					m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)}
 				}
+			default:
+				m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)}
+			}
 		}
 	}
 }
 
 func get_clipboard_if_asked(use_clipboard bool) string {
 	var premoves string
-	
+
 	if use_clipboard {
 		err := clipboard.Init()
 		if err != nil {
@@ -269,23 +262,11 @@ func draw_timers(white_time_counter, black_time_counter time_counter.Counter, a 
 
 func array_one_is_equal_to_array_two(array_a [64]pieces.Piece, array_b [64]pieces.Piece) bool {
 	for i := 0; i < len(array_a); i++ {
-		if fmt.Sprint(array_a[i]) != fmt.Sprint(array_b[i]) {
-			fmt.Println(i)
+		if fmt.Sprint(array_a[i]) != fmt.Sprint(array_b[i]) || fmt.Sprintf("%T", array_a[i]) != fmt.Sprintf("%T", array_b[i]) {
 			return false
 		}
 	}
 	return true
-}
-
-func empty_channel (m_channel chan [4]int16) {
-	outer:
-	for {
-		select {		
-			case <-m_channel:
-			default:
-				break outer
-		}
-	}
 }
 
 func get_current_piece(pieces_a [64]pieces.Piece, current_field [2]uint16) (pieces.Piece, int) {
@@ -303,7 +284,7 @@ func get_current_piece(pieces_a [64]pieces.Piece, current_field [2]uint16) (piec
 	return temp_current_piece, piece_index
 }
 
-func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [64]pieces.Piece, promotion uint16, piece_is_selected uint16, a, w_x, w_y uint16, current_king_index int, check bool, moves_counter int16) ([64]pieces.Piece, uint16, bool, uint16) {
+func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [64]pieces.Piece, promotion uint16, piece_is_selected uint16, a, w_x, w_y uint16, current_king_index int, check bool, moves_counter int16, m_channel chan [4]int16) ([64]pieces.Piece, uint16, bool, uint16) {
 	current_piece := pieces_a[piece_is_selected]
 	current_legal_moves := current_piece.Give_Legal_Moves()
 	for k := 0; k < len(current_legal_moves); k++ {
@@ -312,7 +293,7 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 			pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
 			if promotion != 64 {
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-				pieces_a = pawn_promotion(w_x, w_y, a, int(piece_is_selected), pieces_a, "A")
+				pieces_a, _ = pawn_promotion(w_x, w_y, a, int(piece_is_selected), pieces_a, "A", m_channel)
 			}
 			piece_is_selected = 64
 			promotion = 0
@@ -320,13 +301,6 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 		}
 	}
 	return pieces_a, piece_is_selected, false, promotion
-}
-
-func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Button, game_timer int64) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
-	//this restart function works in parts, the problem is that it does not clear the current piece, which means a piece is technicly already selected after restarting, it seems like clearing the channel is not needed
-	pieces_a, white_king_index, black_king_index, _, _, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, true, game_timer)
-
-	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true, moves_a, white_time_counter, black_time_counter
 }
 
 func display_message(message_type uint8, a uint16, white_is_current_player bool) {
@@ -356,7 +330,7 @@ func display_message(message_type uint8, a uint16, white_is_current_player bool)
 		gfx.Stiftfarbe(0, 143, 230)
 		gfx.SetzeFont("./resources/fonts/punk.ttf", int(a))
 		gfx.SchreibeFont(144*a/100, 37*a/10, "stalemate")
-		
+
 	} else if message_type == 2 {
 		gfx.SchreibeFont(180*a/100, 31*a/10, "Press any key to")
 
@@ -364,14 +338,15 @@ func display_message(message_type uint8, a uint16, white_is_current_player bool)
 		gfx.SetzeFont("./resources/fonts/punk.ttf", int(a))
 		gfx.SchreibeFont(260*a/100, 37*a/10, "star t")
 	}
-	
+
 	gfx.Transparenz(0)
 	gfx.UpdateAn()
 	gfx.TastaturLesen1()
 
 }
 
-func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece, premoved string) [64]pieces.Piece {
+func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece, premoved string, m_channel chan [4]int16) ([64]pieces.Piece, string) {
+	var piece_promoted_to string
 	var queen pieces.Piece = pieces.NewQueen(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
 	var knight pieces.Piece = pieces.NewKnight(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
 	var rook pieces.Piece = pieces.NewRook(pieces_a[pawn_index].Give_Pos()[0], pieces_a[pawn_index].Give_Pos()[1], pieces_a[pawn_index].Is_White_Piece())
@@ -390,16 +365,20 @@ func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piec
 		pieces.Draw_To_Point(rook, w_x, w_y, a, (4 * a), (4*a)-(5*a)/10, 0, 0, 0, 0)
 		pieces.Draw_To_Point(bishop, w_x, w_y, a, (5 * a), (4*a)-(5*a)/10, 0, 0, 0, 0)
 		for {
-			button, status, m_x, m_y := gfx.MausLesen1()
-			if button == 1 && status == 1 && m_x >= 2*a && m_x <= 6*a && m_y >= (4*a)-(5*a)/10 && m_y <= (4*a)+(5*a)/10 {
-				x_field_pos := (calc_field(a, m_x, m_y, (5*a)/10))[0]
+			mouse_input := <-m_channel
+			if mouse_input[0] == 1 && mouse_input[1] == 1 && uint16(mouse_input[2]) >= 2*a && uint16(mouse_input[2]) <= 6*a && uint16(mouse_input[3]) >= (4*a)-(5*a)/10 && uint16(mouse_input[3]) <= (4*a)+(5*a)/10 {
+				x_field_pos := (calc_field(a, uint16(mouse_input[2]), uint16(mouse_input[3]), (5*a)/10))[0]
 				if x_field_pos == 2 {
+					piece_promoted_to = "Q"
 					pieces_a[pawn_index] = queen
 				} else if x_field_pos == 3 {
+					piece_promoted_to = "K"
 					pieces_a[pawn_index] = knight
 				} else if x_field_pos == 4 {
+					piece_promoted_to = "R"
 					pieces_a[pawn_index] = rook
 				} else if x_field_pos == 5 {
+					piece_promoted_to = "B"
 					pieces_a[pawn_index] = bishop
 				}
 				break
@@ -407,6 +386,8 @@ func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piec
 		}
 
 	} else {
+		piece_promoted_to = premoved
+
 		if premoved == "Q" {
 			pieces_a[pawn_index] = queen
 		} else if premoved == "N" {
@@ -417,7 +398,7 @@ func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piec
 			pieces_a[pawn_index] = bishop
 		}
 	}
-	return pieces_a
+	return pieces_a, piece_promoted_to
 }
 
 func draw_board(a, w_x, w_y uint16, current_piece pieces.Piece, current_legal_moves [][3]uint16, pieces_a [64]pieces.Piece, highlighting_is_activated bool, current_king_index int, check bool) {
@@ -436,8 +417,9 @@ func draw_board(a, w_x, w_y uint16, current_piece pieces.Piece, current_legal_mo
 	gfx.UpdateAn()
 }
 
-func change_player(white_is_current_player bool, white_king_index, black_king_index int) (bool, int) {
+func change_player(white_is_current_player bool, white_king_index, black_king_index int, moves_counter int16) (bool, int, bool, int16) {
 	var current_king_index int
+	moves_counter = moves_counter + 1
 	if white_is_current_player {
 		current_king_index = black_king_index
 		white_is_current_player = false
@@ -445,7 +427,7 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 		current_king_index = white_king_index
 		white_is_current_player = true
 	}
-	return white_is_current_player, current_king_index
+	return white_is_current_player, current_king_index, false, moves_counter
 }
 
 func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
@@ -524,16 +506,6 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.
 
 	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, moves_a, white_time_counter, black_time_counter
 }
-
-// func calc_a(w_x, w_y uint16) uint16 {
-// 	var a uint16
-// 	if w_x < w_y {
-// 		a = w_x / 8
-// 	} else {
-// 		a = w_y / 8
-// 	}
-// 	return a
-// }
 
 func append_moves_array(moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece) [][64]pieces.Piece {
 	moves_a = append(moves_a, pieces.Copy_Array(pieces_a))
@@ -633,3 +605,36 @@ func calc_field(a, m_x, m_y, y_offset uint16) [2]uint16 {
 	current_field[1] = (m_y + y_offset) / a
 	return current_field
 }
+
+//the old restart works like this:
+//~ pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
+//~ dragging = false
+//~ empty_channel(m_channel)
+
+// func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Button, game_timer int64) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
+// 	//this restart function works in parts, the problem is that it does not clear the current piece, which means a piece is technicly already selected after restarting, it seems like clearing the channel is not needed
+// 	pieces_a, white_king_index, black_king_index, _, _, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, true, game_timer)
+
+// 	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true, moves_a, white_time_counter, black_time_counter
+// }
+
+// func empty_channel(m_channel chan [4]int16) {
+// outer:
+// 	for {
+// 		select {
+// 		case <-m_channel:
+// 		default:
+// 			break outer
+// 		}
+// 	}
+// }
+
+// func calc_a(w_x, w_y uint16) uint16 {
+// 	var a uint16
+// 	if w_x < w_y {
+// 		a = w_x / 8
+// 	} else {
+// 		a = w_y / 8
+// 	}
+// 	return a
+// }
