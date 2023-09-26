@@ -55,43 +55,47 @@ restart_marker:
 	display_message(2, a, false)
 
 	m_channel := make(chan [4]int16, 1)
-	go mouse_handler(m_channel)
+	gor_status := make(chan bool)
+
+	go mouse_handler(m_channel, gor_status)
 
 	for { //gameloop
 
 		if player_change {
-			if int(moves_counter) == len(moves_a) {
+			if int(moves_counter) == len(moves_a) { //apppend the moves_array when a new move was made
 				moves_a = append_moves_array(moves_a, pieces_a)
-			} else if !array_one_is_equal_to_array_two(pieces_a, moves_a[moves_counter]) {
-				if game_history_can_be_changed {
+			} else if !array_one_is_equal_to_array_two(pieces_a, moves_a[moves_counter]) { //if there was a move changed
+				if game_history_can_be_changed { //if it's allowed to change a move in the history, this block replaces the move in the moves array with the current one and cuts of the rest of the array
 					fmt.Println("there was a move changed in the game history")
 					moves_a[moves_counter] = pieces.Copy_Array(pieces_a)
 					moves_a = moves_a[:moves_counter+1]
-				} else {
+				} else { //if it's not allowed it just deletes the move made and resets
 					fmt.Println("changed game history although this is not allowed")
 					pieces_a = pieces.Copy_Array(moves_a[moves_counter])
 				}
 			}
 
 			//restart = false
-			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter)
-			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)
-			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)
+			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) // this function sets the current_king_index
+			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)                                                                       //calce the move
+			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)                                                                              //check if the current king is in check
 
 			if !use_clipboard_as_premoves || duration_of_premove_animation != 0 { //wenn keine premoves mehr da sind oder premoves da sind und diese gezeichnet werden sollen dann wird das board gezeichnet
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			}
 
-			if checkmate && check {
+			if checkmate && check { //game end / restart
 				if check {
 					display_message(0, a, white_is_current_player)
 				} else {
 					display_message(1, a, white_is_current_player)
 				}
 				restart_window = true
+				gor_status <- true
 				goto restart_marker
 			}
 
+			//timer changing --> can be moved into to change player function
 			if white_is_current_player {
 				black_time_counter.Stop_Counting()
 				white_time_counter.Init_Counting()
@@ -148,6 +152,7 @@ restart_marker:
 						}
 					} else if restart_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						restart_window = true
+						gor_status <- true
 						goto restart_marker
 					} else {
 
@@ -203,25 +208,33 @@ restart_marker:
 			if draw_timers(white_time_counter, black_time_counter, a) {
 				display_message(0, a, white_is_current_player)
 				restart_window = true
+				gor_status <- true
 				goto restart_marker
 			}
 		}
 	}
 }
 
-func mouse_handler(m_channel chan [4]int16) {
+func mouse_handler(m_channel chan [4]int16, gor_status chan bool) {
 	for {
-		button, status, m_x, m_y := gfx.MausLesen1()
-		if !(button == 0 && status == 0) {
-			select {
-			case temp := <-m_channel: //stellt sicher dass leer ist
-				if temp[0] == 1 && temp[1] == 1 { //wenn es ein klicken befehl ist, dann soll dieser nicht überschrieben werden, da es sonst zu bugs kommen kann und "verschluckt" wird, dass ein piece ausgewählt wurde
-					m_channel <- temp
-				} else {
-					m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)} //schreibt nur wenn leer ist
+		select {
+		case quit := <-gor_status:
+			if quit {
+				return
+			}
+		default:
+			button, status, m_x, m_y := gfx.MausLesen1()
+			if !(button == 0 && status == 0) {
+				select {
+				case temp := <-m_channel: //stellt sicher dass leer ist
+					if temp[0] == 1 && temp[1] == 1 { //wenn es ein klicken befehl ist, dann soll dieser nicht überschrieben werden, da es sonst zu bugs kommen kann und "verschluckt" wird, dass ein piece ausgewählt wurde
+						m_channel <- temp
+					} else {
+						m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)} //schreibt nur wenn leer ist
+					}
+				default:
+					m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)}
 				}
-			default:
-				m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)}
 			}
 		}
 	}
