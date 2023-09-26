@@ -20,6 +20,7 @@ type Button struct {
 	B_Label      uint8
 	Label_Offset uint16
 	font_size    int
+	state        bool
 }
 
 func New(x uint16, y uint16, length uint16, height uint16, name string, r, g, b, r_label, g_label, b_label uint8, label_offset uint16, font_size int) *Button {
@@ -37,6 +38,7 @@ func New(x uint16, y uint16, length uint16, height uint16, name string, r, g, b,
 	(*button).B_Label = b_label
 	(*button).Label_Offset = label_offset
 	(*button).font_size = font_size
+	(*button).state = false
 	return button
 }
 
@@ -63,4 +65,28 @@ func (b *Button) Is_Clicked(x, y uint16) bool {
 		return true
 	}
 	return false
+}
+
+func (b *Button) Give_State() bool {
+	return b.state
+}
+
+func (b *Button) Switch(re, gr, bl uint8) bool {
+	if b.state {
+		b.state = false
+		gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)
+		gfx.Stiftfarbe(b.R, b.G, b.B)
+		gfx.Vollrechteck(b.X, b.Y, b.Length, b.Height)
+		gfx.Stiftfarbe(b.R_Label, b.G_Label, b.B_Label)
+		gfx.SchreibeFont(b.X+b.Label_Offset, b.Y+b.Height/10, b.Name)
+	} else {
+		b.state = true
+		gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)
+		gfx.Stiftfarbe(re, gr, bl)
+		gfx.Vollrechteck((*b).X, (*b).Y, (*b).Length, (*b).Height)
+		gfx.Stiftfarbe(b.R_Label, b.G_Label, b.B_Label)
+		gfx.SchreibeFont((*b).X+(*b).Label_Offset, (*b).Y+(*b).Height/10, (*b).Name)
+	}
+
+	return b.state
 }

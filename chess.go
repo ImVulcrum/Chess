@@ -27,7 +27,7 @@ restart_marker:
 	var duration_of_premove_animation int = 1
 	var deselect_piece_after_clicking = false
 	var game_history_can_be_changed = true
-	var game_timer int64 = 5000
+	var game_timer int64 = 500000
 
 	//~ var restart bool
 	var white_is_current_player bool = false
@@ -47,7 +47,7 @@ restart_marker:
 	var premoves string = get_clipboard_if_asked(use_clipboard_as_premoves)
 	var promotion uint16 = 0
 
-	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, restart_window, game_timer)
+	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, restart_window, game_timer)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
 
 	draw_pieces(pieces_a, w_x, w_y, a)
@@ -96,6 +96,9 @@ restart_marker:
 			}
 
 			//timer changing --> can be moved into to change player function
+			if pause_button.Give_State() {
+				pause_button.Switch(0, 0, 0)
+			}
 			if white_is_current_player {
 				black_time_counter.Stop_Counting()
 				white_time_counter.Init_Counting()
@@ -154,6 +157,18 @@ restart_marker:
 						restart_window = true
 						gor_status <- true
 						goto restart_marker
+					} else if pause_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
+						var pausing bool = pause_button.Switch(38, 37, 34)
+						if pausing {
+							white_time_counter.Stop_Counting()
+							black_time_counter.Stop_Counting()
+						} else {
+							if white_is_current_player {
+								white_time_counter.Init_Counting()
+							} else {
+								black_time_counter.Init_Counting()
+							}
+						}
 					} else {
 
 						current_field = calc_field(a, uint16(mouse_input[2]), uint16(mouse_input[3]), 0)
@@ -448,7 +463,7 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 	return white_is_current_player, current_king_index, false, moves_counter
 }
 
-func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
+func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
 	var one_move_back buttons.Button
 	var one_move_forward buttons.Button
 	var restart_button buttons.Button
@@ -459,20 +474,21 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.
 		gfx.Fenster(w_x, w_y)
 		gfx.Fenstertitel("Chess")
 		rescale_image(a)
-		one_move_back = *buttons.New(8*a+a/10, 7*a+a/10, a-a/5, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
-		one_move_forward = *buttons.New(9*a+a/10, 7*a+a/10, a-a/5, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
-		restart_button = *buttons.New(8*a+a/10, 65*a/10, a-a/15, 3*a/10, "restart", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
-		pause_button = *buttons.New(9*a+a/6, 65*a/10, a-a/4, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
-
-		gfx.Stiftfarbe(86, 82, 77)
-		gfx.Vollrechteck(8*a, 7*a, 2*a, a)
-		gfx.Stiftfarbe(48, 46, 43)
-		gfx.Vollrechteck(8*a, 6*a, 2*a, a)
-		one_move_back.Draw()
-		one_move_forward.Draw()
-		restart_button.Draw()
-		pause_button.Draw()
 	}
+
+	one_move_back = *buttons.New(8*a+a/10, 7*a+a/10, a-a/5, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
+	one_move_forward = *buttons.New(9*a+a/10, 7*a+a/10, a-a/5, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
+	restart_button = *buttons.New(8*a+a/10, 65*a/10, a-a/15, 3*a/10, "restart", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
+	pause_button = *buttons.New(9*a+a/6, 65*a/10, a-a/4, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
+
+	gfx.Stiftfarbe(86, 82, 77)
+	gfx.Vollrechteck(8*a, 7*a, 2*a, a)
+	gfx.Stiftfarbe(48, 46, 43)
+	gfx.Vollrechteck(8*a, 6*a, 2*a, a)
+	one_move_back.Draw()
+	one_move_forward.Draw()
+	restart_button.Draw()
+	pause_button.Draw()
 
 	gfx.Stiftfarbe(48, 46, 43)
 	gfx.Vollrechteck(8*a, 0, 2*a, 6*a)
@@ -530,7 +546,7 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.
 	white_time_counter := time_counter.New(game_timer)
 	black_time_counter := time_counter.New(game_timer)
 
-	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, moves_a, white_time_counter, black_time_counter
+	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter
 }
 
 func append_moves_array(moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece) [][64]pieces.Piece {
