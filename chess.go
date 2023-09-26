@@ -27,13 +27,13 @@ restart_marker:
 	var duration_of_premove_animation int = 1
 	var deselect_piece_after_clicking = false
 	var game_history_can_be_changed = true
-	var game_timer int64 = 500000
+	var game_timer int64 = 50000
 
 	//~ var restart bool
 	var white_is_current_player bool = false
 	var player_change bool = true
 	var current_king_index int
-	var checkmate bool
+	var current_player_has_no_legal_moves bool
 	var check bool
 	var current_piece pieces.Piece
 	var temp_current_piece pieces.Piece
@@ -62,51 +62,21 @@ restart_marker:
 	for { //gameloop
 
 		if player_change {
-			if int(moves_counter) == len(moves_a) { //apppend the moves_array when a new move was made
-				moves_a = append_moves_array(moves_a, pieces_a)
-			} else if !array_one_is_equal_to_array_two(pieces_a, moves_a[moves_counter]) { //if there was a move changed
-				if game_history_can_be_changed { //if it's allowed to change a move in the history, this block replaces the move in the moves array with the current one and cuts of the rest of the array
-					fmt.Println("there was a move changed in the game history")
-					moves_a[moves_counter] = pieces.Copy_Array(pieces_a)
-					moves_a = moves_a[:moves_counter+1]
-				} else { //if it's not allowed it just deletes the move made and resets
-					fmt.Println("changed game history although this is not allowed")
-					pieces_a = pieces.Copy_Array(moves_a[moves_counter])
-				}
-			}
+			pieces_a, moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed)
 
-			//restart = false
-			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) // this function sets the current_king_index
-			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)                                                                       //calce the move
+			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) //this function sets the current_king_index
+			pieces_a, current_player_has_no_legal_moves = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)                                               //calc the move
 			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)                                                                              //check if the current king is in check
 
 			if !use_clipboard_as_premoves || duration_of_premove_animation != 0 { //wenn keine premoves mehr da sind oder premoves da sind und diese gezeichnet werden sollen dann wird das board gezeichnet
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			}
 
-			if checkmate && check { //game end / restart
-				if check {
-					display_message(0, a, white_is_current_player)
-				} else {
-					display_message(1, a, white_is_current_player)
-				}
-				restart_window = true
-				gor_status <- true
+			if restart_window = restart_handler(current_player_has_no_legal_moves, check, a, white_is_current_player, gor_status); restart_window {
 				goto restart_marker
 			}
 
-			//timer changing --> can be moved into to change player function
-			if pause_button.Give_State() {
-				pause_button.Switch(0, 0, 0)
-			}
-			if white_is_current_player {
-				black_time_counter.Stop_Counting()
-				white_time_counter.Init_Counting()
-
-			} else if !white_is_current_player {
-				white_time_counter.Stop_Counting()
-				black_time_counter.Init_Counting()
-			}
+			time_handler(white_is_current_player, white_time_counter, black_time_counter, pause_button)
 		}
 
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
@@ -143,15 +113,11 @@ restart_marker:
 							moves_counter = moves_counter - 2
 							pieces_a = pieces.Copy_Array(moves_a[moves_counter])
 							player_change = true
-						} else {
-							fmt.Println("first move has been reached")
 						}
 					} else if one_move_forward.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						if int(moves_counter) < len(moves_a) {
 							pieces_a = pieces.Copy_Array(moves_a[moves_counter])
 							player_change = true
-						} else {
-							fmt.Println("last move has been reached")
 						}
 					} else if restart_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						restart_window = true
@@ -162,12 +128,10 @@ restart_marker:
 						if pausing {
 							white_time_counter.Stop_Counting()
 							black_time_counter.Stop_Counting()
-						} else {
-							if white_is_current_player {
-								white_time_counter.Init_Counting()
-							} else {
-								black_time_counter.Init_Counting()
-							}
+						} else if white_is_current_player {
+							white_time_counter.Init_Counting()
+						} else if !white_is_current_player {
+							black_time_counter.Init_Counting()
 						}
 					} else {
 
@@ -228,6 +192,52 @@ restart_marker:
 			}
 		}
 	}
+}
+
+func game_history_handler(moves_counter int16, moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece, game_history_can_be_changed bool) ([64]pieces.Piece, [][64]pieces.Piece) {
+	if int(moves_counter) == len(moves_a) { //apppend the moves_array when a new move was made
+		moves_a = append_moves_array(moves_a, pieces_a)
+		fmt.Println("ffdg")
+	} else if !array_one_is_equal_to_array_two(pieces_a, moves_a[moves_counter]) { //if there was a move changed
+		if game_history_can_be_changed { //if it's allowed to change a move in the history, this block replaces the move in the moves array with the current one and cuts of the rest of the array
+			fmt.Println("there was a move changed in the game history")
+			moves_a[moves_counter] = pieces.Copy_Array(pieces_a)
+			moves_a = moves_a[:moves_counter+1]
+		} else { //if it's not allowed it just deletes the move made and resets
+			fmt.Println("changed game history although this is not allowed")
+			pieces_a = pieces.Copy_Array(moves_a[moves_counter])
+		}
+	}
+	return pieces_a, moves_a
+}
+
+func time_handler(white_is_current_player bool, white_time_counter time_counter.Counter, black_time_counter time_counter.Counter, pause_button *buttons.Button) {
+	if pause_button.Give_State() {
+		pause_button.Switch(0, 0, 0)
+	}
+	if white_is_current_player {
+		black_time_counter.Stop_Counting()
+		white_time_counter.Init_Counting()
+
+	} else if !white_is_current_player {
+		white_time_counter.Stop_Counting()
+		black_time_counter.Init_Counting()
+	}
+}
+
+func restart_handler(current_player_has_no_legal_moves bool, check bool, a uint16, white_is_current_player bool, gor_status chan bool) bool {
+	var restart_window bool = false
+	if current_player_has_no_legal_moves { //game end / restart
+		if check {
+			display_message(0, a, white_is_current_player)
+		} else {
+			display_message(1, a, white_is_current_player)
+		}
+		restart_window = true
+		gor_status <- true
+		return restart_window
+	}
+	return restart_window
 }
 
 func mouse_handler(m_channel chan [4]int16, gor_status chan bool) {
@@ -463,11 +473,11 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 	return white_is_current_player, current_king_index, false, moves_counter
 }
 
-func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
+func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
 	var one_move_back buttons.Button
 	var one_move_forward buttons.Button
 	var restart_button buttons.Button
-	var pause_button buttons.Button
+	var pause_button *buttons.Button
 	var moves_a [][64]pieces.Piece
 
 	if !restart {
@@ -479,7 +489,7 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.
 	one_move_back = *buttons.New(8*a+a/10, 7*a+a/10, a-a/5, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
 	one_move_forward = *buttons.New(9*a+a/10, 7*a+a/10, a-a/5, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
 	restart_button = *buttons.New(8*a+a/10, 65*a/10, a-a/15, 3*a/10, "restart", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
-	pause_button = *buttons.New(9*a+a/6, 65*a/10, a-a/4, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
+	pause_button = buttons.New(9*a+a/6, 65*a/10, a-a/4, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
 
 	gfx.Stiftfarbe(86, 82, 77)
 	gfx.Vollrechteck(8*a, 7*a, 2*a, a)
