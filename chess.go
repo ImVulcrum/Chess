@@ -62,29 +62,29 @@ restart_marker:
 	for { //gameloop
 
 		if player_change {
-			if int(moves_counter) == len(moves_a) {
+			if int(moves_counter) == len(moves_a) { //apppend the moves_array when a new move was made
 				moves_a = append_moves_array(moves_a, pieces_a)
-			} else if !array_one_is_equal_to_array_two(pieces_a, moves_a[moves_counter]) {
-				if game_history_can_be_changed {
+			} else if !array_one_is_equal_to_array_two(pieces_a, moves_a[moves_counter]) { //if there was a move changed
+				if game_history_can_be_changed { //if it's allowed to change a move in the history, this block replaces the move in the moves array with the current one and cuts of the rest of the array	
 					fmt.Println("there was a move changed in the game history")
 					moves_a[moves_counter] = pieces.Copy_Array(pieces_a)
 					moves_a = moves_a[:moves_counter+1]
-				} else {
+				} else {	//if it's not allowed it just deletes the move made and resets
 					fmt.Println("changed game history although this is not allowed")
 					pieces_a = pieces.Copy_Array(moves_a[moves_counter])
 				}
 			}
 
 			//restart = false
-			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter)
-			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)
-			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)
+			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) // this function sets the current_king_index
+			pieces_a, checkmate = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index) //calce the move
+			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)	//check if the current king is in check
 
 			if !use_clipboard_as_premoves || duration_of_premove_animation != 0 { //wenn keine premoves mehr da sind oder premoves da sind und diese gezeichnet werden sollen dann wird das board gezeichnet
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			}
 
-			if checkmate && check {
+			if checkmate && check { //game end / restart
 				if check {
 					display_message(0, a, white_is_current_player)
 				} else {
@@ -95,6 +95,7 @@ restart_marker:
 				goto restart_marker
 			}
 
+			//timer changing --> can be moved into to change player function
 			if white_is_current_player {
 				black_time_counter.Stop_Counting()
 				white_time_counter.Init_Counting()
