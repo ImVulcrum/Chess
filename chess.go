@@ -27,7 +27,7 @@ restart_marker:
 	var duration_of_premove_animation int = 1
 	var deselect_piece_after_clicking = false
 	var game_history_can_be_changed = true
-	var game_timer int64 = 500000
+	var game_timer int64 = 50000
 
 	//~ var restart bool
 	var white_is_current_player bool = false
@@ -55,7 +55,9 @@ restart_marker:
 	display_message(2, a, false)
 
 	m_channel := make(chan [4]int16, 1)
-	go mouse_handler(m_channel)
+	gor_status := make(chan bool)
+	
+	go mouse_handler(m_channel, gor_status)
 
 	for { //gameloop
 
@@ -89,6 +91,7 @@ restart_marker:
 					display_message(1, a, white_is_current_player)
 				}
 				restart_window = true
+				gor_status <- true
 				goto restart_marker
 			}
 
@@ -200,27 +203,35 @@ restart_marker:
 			if draw_timers(white_time_counter, black_time_counter, a) {
 				display_message(0, a, white_is_current_player)
 				restart_window = true
+				gor_status <- true
 				goto restart_marker
 			}
 		}
 	}
 }
 
-func mouse_handler(m_channel chan [4]int16) {
+func mouse_handler(m_channel chan [4]int16, gor_status chan bool) {
 	for {
-		button, status, m_x, m_y := gfx.MausLesen1()
-		if !(button == 0 && status == 0) {
-			select {
-			case temp := <-m_channel: //stellt sicher dass leer ist
-				if temp[0] == 1 && temp[1] == 1 { //wenn es ein klicken befehl ist, dann soll dieser nicht überschrieben werden, da es sonst zu bugs kommen kann und "verschluckt" wird, dass ein piece ausgewählt wurde
-					m_channel <- temp
-				} else {
-					m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)} //schreibt nur wenn leer ist
+		select {
+			case quit := <- gor_status:
+				if quit {
+					return
 				}
-			default:
-				m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)}
+			default: 
+				button, status, m_x, m_y := gfx.MausLesen1()
+				if !(button == 0 && status == 0) {
+					select {
+					case temp := <-m_channel: //stellt sicher dass leer ist
+						if temp[0] == 1 && temp[1] == 1 { //wenn es ein klicken befehl ist, dann soll dieser nicht überschrieben werden, da es sonst zu bugs kommen kann und "verschluckt" wird, dass ein piece ausgewählt wurde
+							m_channel <- temp
+						} else {
+							m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)} //schreibt nur wenn leer ist
+						}
+					default:
+						m_channel <- [4]int16{int16(button), int16(status), int16(m_x), int16(m_y)}
+					}
+				}
 			}
-		}
 	}
 }
 
