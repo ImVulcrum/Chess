@@ -356,7 +356,7 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 
 func get_move_string (current_piece pieces.Piece,  current_move [2]uint16, piece_promoting string) string {
 	piece_name := give_piece_type(current_piece)
-	fmt.Println(current_move)
+	fmt.Println(parser.Get_Move_From_Field(current_move))
 
 
 	move_string := piece_name +""
