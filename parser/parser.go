@@ -159,6 +159,23 @@ func Translate_PGN_Field_Notation(cord_string string) (uint16, bool) {
 	return cord, is_x_cord
 }
 
+func Get_Move_From_Field (field [2]uint16) string {
+	var move string
+
+	move = Translate_PGN_Field_Notation(field[0])
+
+}
+
+func Translate_Field_Cord_To_PGN (field_cord uint16, is_x_cord bool) string {
+	if is_x_cord {
+		rune_field_cord = rune("a") + rune(field_cord)
+		
+		
+
+	}
+
+}
+
 func Get_Field_From_Move(move string) [2]uint16 {
 	var field [2]uint16
 

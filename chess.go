@@ -197,7 +197,6 @@ restart_marker:
 func game_history_handler(moves_counter int16, moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece, game_history_can_be_changed bool) ([64]pieces.Piece, [][64]pieces.Piece) {
 	if int(moves_counter) == len(moves_a) { //apppend the moves_array when a new move was made
 		moves_a = append_moves_array(moves_a, pieces_a)
-		fmt.Println("ffdg")
 	} else if !array_one_is_equal_to_array_two(pieces_a, moves_a[moves_counter]) { //if there was a move changed
 		if game_history_can_be_changed { //if it's allowed to change a move in the history, this block replaces the move in the moves array with the current one and cuts of the rest of the array
 			fmt.Println("there was a move changed in the game history")
@@ -333,18 +332,61 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 	for k := 0; k < len(current_legal_moves); k++ {
 		if current_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //wenn das der Fall ist, wird das Piece bewegt
 			//moved something
+			var piece_promoting_to string = ""
+
 			pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
+		
 			if promotion != 64 {
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
-				pieces_a, _ = pawn_promotion(w_x, w_y, a, int(piece_is_selected), pieces_a, "A", m_channel)
+				pieces_a, piece_promoting_to = pawn_promotion(w_x, w_y, a, int(piece_is_selected), pieces_a, "A", m_channel)
+				piece_promoting_to = "=" + piece_promoting_to
 			}
 			piece_is_selected = 64
 			promotion = 0
+
+			move_string := get_move_string(current_piece, current_field, piece_promoting_to)
+			fmt.Println(move_string)
+
 			return pieces_a, 64, true, 0
 		}
 	}
+	//not sure but i think returning the promotion value is obsolet
 	return pieces_a, piece_is_selected, false, promotion
 }
+
+func get_move_string (current_piece pieces.Piece,  current_move [2]uint16, piece_promoting string) string {
+	piece_name := give_piece_type(current_piece)
+	fmt.Println(current_move)
+
+
+	move_string := piece_name +""
+
+	return move_string
+}
+
+func give_piece_type (current_piece pieces.Piece) string {
+	piece_type := fmt.Sprintf("%T", current_piece)
+
+
+	switch piece_type {
+	case "*pieces.Pawn":
+		piece_type = "P"
+	case "*pieces.Knight":
+		piece_type = "N"
+	case "*pieces.Bishop":
+		piece_type = "B"
+	case "*pieces.Rook":
+		piece_type = "R"
+	case "*pieces.Queen":
+		piece_type = "Q"
+	case "*pieces.King":
+		piece_type = "K"
+	}
+	return piece_type
+}
+
+
+
 
 func display_message(message_type uint8, a uint16, white_is_current_player bool) {
 
