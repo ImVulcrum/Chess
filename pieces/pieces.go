@@ -62,8 +62,9 @@ func Draw_To_Point(piece Piece, w_x, w_y, a, x, y uint16, x_offset, y_offset int
 	gfx.UpdateAn()
 }
 
-func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece) ([64]Piece, uint16) { //rook and king has moved change
+func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pieces_a [64]Piece) ([64]Piece, uint16, string) { //rook and king has moved change
 	var promotion uint16 = 64
+	var take string = ""
 
 	if king, ok := piece.(*King); ok {
 		if new_position[2] == 64 { //normal move
@@ -82,9 +83,10 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 			} else {
 				fmt.Println("Panic: Error has occured, Rook for Castle is not on expected position")
 			}
-		} else if new_position[2] >= 66 && new_position[2] <= 129 {
+		} else if new_position[2] >= 66 && new_position[2] <= 129 { //king take move
 			king.Has_moved = 0
 			pieces_a[new_position[2]-66] = nil
+			take = "x"
 		} else {
 			fmt.Println("panic: Error has occured, king move status is out of range")
 		}
@@ -95,11 +97,13 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 		} else if new_position[2] <= 63 { //en passant
 			pieces_a[new_position[2]] = nil
 			pawn.Has_moved = 0
+			take = "x"
 		} else if new_position[2] == 64 { //normal move
 			pawn.Has_moved = 0
-		} else if new_position[2] >= 66 && new_position[2] <= 129 {
+		} else if new_position[2] >= 66 && new_position[2] <= 129 { //take move
 			pawn.Has_moved = 0
 			pieces_a[new_position[2]-66] = nil
+			take = "x"
 		} else {
 			fmt.Println("panic: Error has occured, pawn move status is out of range")
 		}
@@ -119,26 +123,42 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 		} else if new_position[2] <= 63 { //normal piece take move
 			piece.Set_Has_Moved(1)
 			pieces_a[new_position[2]] = nil
+			take = "x"
 		} else {
 			fmt.Println(new_position[2])
 			fmt.Println("panic: Error has occured, normal piece move status is out of range")
 		}
 	}
 
-	// if reset {
-	// 	piece.Set_Has_Moved(Has_moved)
-	// 	if castle_status != -1 {
-	// 		pieces_a[castle_status].Set_Has_Moved(0)
-	// 	}
-	// }
-
 	piece.Move_To([2]uint16{new_position[0], new_position[1]})
 
-	return pieces_a, promotion //, castle_status, rook_pos
+	return pieces_a, promotion, take
 }
 
 func (c *ChessObject) Give_Pos() [2]uint16 {
 	return c.Position
+}
+
+func (c *ChessObject) Give_Piece_Type() string {
+	return "Error"
+}
+func (c *Pawn) Give_Piece_Type() string {
+	return ""
+}
+func (c *Knight) Give_Piece_Type() string {
+	return "N"
+}
+func (c *Bishop) Give_Piece_Type() string {
+	return "B"
+}
+func (c *Rook) Give_Piece_Type() string {
+	return "R"
+}
+func (c *Queen) Give_Piece_Type() string {
+	return "Q"
+}
+func (c *King) Give_Piece_Type() string {
+	return "K"
 }
 
 func (c *ChessObject) Piece_Is_White() bool {
@@ -364,7 +384,7 @@ func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king
 
 			for k := 0; k < len(current_legal_moves); k++ { //iterates trough the legal moves for the current piece
 				temp_pieces_a := Copy_Array(pieces_a) //this creates a deep copy of the pieces array --> resets after evry legal move
-				temp_pieces_a, _ = Move_Piece_To(temp_pieces_a[i], current_legal_moves[k], moves_counter, temp_pieces_a)
+				temp_pieces_a, _, _ = Move_Piece_To(temp_pieces_a[i], current_legal_moves[k], moves_counter, temp_pieces_a)
 
 				//fmt.Println(temp_pieces_a[current_king_index].(*King).Give_Pos())
 

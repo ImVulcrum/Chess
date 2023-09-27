@@ -172,23 +172,14 @@ func Get_Field_From_Move(move string) [2]uint16 {
 	return field
 }
 
-func Translate_Field_Cord_To_PGN (field_cord uint16, is_x_cord bool) string {
-	var string_cord string
+func Translate_Field_Cord_To_PGN_String(field_cord uint16, is_x_cord bool) string {
 	if is_x_cord {
-		string_cord = string(int("a"[0])+int(field_cord)) 
-	}	else {
-		string_cord = strconv.Itoa(-1*(int(field_cord) -8))
+		return string(rune(int("a"[0]) + int(field_cord)))
+	} else {
+		return strconv.Itoa(-1 * (int(field_cord) - 8))
 	}
-	return string_cord
 }
 
-func Get_Move_From_Field (field [2]uint16) string {
-	var move string
-
-	move = Translate_Field_Cord_To_PGN(field[0], true) + Translate_Field_Cord_To_PGN(field[1], false)
-
-	return move
+func Get_Move_As_String_From_Field(field [2]uint16) string {
+	return (Translate_Field_Cord_To_PGN_String(field[0], true) + Translate_Field_Cord_To_PGN_String(field[1], false))
 }
-
-
-

@@ -19,6 +19,7 @@ type Piece interface {
 	Set_Has_Moved(update int16)
 	Give_Has_Moved() int16
 	DeepCopy(Piece) Piece
+	Give_Piece_Type() string
 }
 
 type Positioning struct { //datentyp Positioning

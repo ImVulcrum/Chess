@@ -21,7 +21,7 @@ func main() {
 
 restart_marker:
 
-	var use_clipboard_as_premoves = false
+	var use_clipboard_as_premoves = true
 	var a uint16 = 100
 	var w_x, w_y uint16 = 10 * a, 8 * a
 	var duration_of_premove_animation int = 1
@@ -46,6 +46,7 @@ restart_marker:
 	var piece_is_selected uint16 = 64
 	var premoves string = get_clipboard_if_asked(use_clipboard_as_premoves)
 	var promotion uint16 = 0
+	var move_string string
 
 	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, restart_window, game_timer)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
@@ -63,6 +64,7 @@ restart_marker:
 
 		if player_change {
 			pieces_a, moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed)
+			fmt.Println(move_string)
 
 			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) //this function sets the current_king_index
 			pieces_a, current_player_has_no_legal_moves = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)                                               //calc the move
@@ -81,13 +83,22 @@ restart_marker:
 
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
 			var promotion uint16 = 0
+			var take string = ""
+			var piece_promoted_to string = ""
+
 			fmt.Println("premove:", premoves_array[0])
+
 			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index)
-			pieces_a, promotion = pieces.Move_Piece_To(pieces_a[piece_executing_move], pieces_a[piece_executing_move].Give_Legal_Moves()[index_of_move], moves_counter, pieces_a)
+
+			var original_pos [2]uint16 = pieces_a[piece_executing_move].Give_Pos()
+
+			pieces_a, promotion, take = pieces.Move_Piece_To(pieces_a[piece_executing_move], pieces_a[piece_executing_move].Give_Legal_Moves()[index_of_move], moves_counter, pieces_a)
 			if promotion != 64 {
-				pieces_a, _ = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to, m_channel)
+				pieces_a, piece_promoted_to = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to, m_channel)
 			}
 			premoves_array = premoves_array[1:]
+
+			move_string = get_move_string(pieces_a[piece_executing_move], original_pos, piece_promoted_to, take)
 
 			time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
 			player_change = true
@@ -148,7 +159,7 @@ restart_marker:
 
 						} else if piece_is_selected != 64 {
 							//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
-							pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
+							pieces_a, piece_is_selected, player_change, promotion, move_string = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
 
 							//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
 							//mit der Option deselect_piece_after_clicking kann eingestellt werde, ob auch deselected werden soll wenn auf dasslebe piece nocheinmal geklickt wurde
@@ -166,7 +177,7 @@ restart_marker:
 
 					if piece_is_selected != 64 {
 						//überprüfen ob in current legal moves
-						pieces_a, piece_is_selected, player_change, promotion = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
+						pieces_a, piece_is_selected, player_change, promotion, move_string = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
 
 						//Deselect sobald ein Piece ausgewählt ist: wenn auf keinem Piece losgelassen wurde oder auf ein generisches Piece losgelassen wurde oder wenn auf einem eigenen piece losgelassen wurde
 						if (temp_current_piece == nil) || (temp_current_piece != nil && ((temp_current_piece.Is_White_Piece() != white_is_current_player) || (temp_current_piece.Is_White_Piece() == white_is_current_player && temp_current_piece.Give_Pos() != current_piece.Give_Pos()))) {
@@ -326,16 +337,18 @@ func get_current_piece(pieces_a [64]pieces.Piece, current_field [2]uint16) (piec
 	return temp_current_piece, piece_index
 }
 
-func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [64]pieces.Piece, promotion uint16, piece_is_selected uint16, a, w_x, w_y uint16, current_king_index int, check bool, moves_counter int16, m_channel chan [4]int16) ([64]pieces.Piece, uint16, bool, uint16) {
+func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [64]pieces.Piece, promotion uint16, piece_is_selected uint16, a, w_x, w_y uint16, current_king_index int, check bool, moves_counter int16, m_channel chan [4]int16) ([64]pieces.Piece, uint16, bool, uint16, string) {
 	current_piece := pieces_a[piece_is_selected]
 	current_legal_moves := current_piece.Give_Legal_Moves()
 	for k := 0; k < len(current_legal_moves); k++ {
 		if current_field == [2]uint16{current_legal_moves[k][0], current_legal_moves[k][1]} { //wenn das der Fall ist, wird das Piece bewegt
 			//moved something
 			var piece_promoting_to string = ""
+			var original_field [2]uint16 = current_piece.Give_Pos()
+			var take string = ""
 
-			pieces_a, promotion = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
-		
+			pieces_a, promotion, take = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
+
 			if promotion != 64 {
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 				pieces_a, piece_promoting_to = pawn_promotion(w_x, w_y, a, int(piece_is_selected), pieces_a, "A", m_channel)
@@ -344,49 +357,24 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 			piece_is_selected = 64
 			promotion = 0
 
-			move_string := get_move_string(current_piece, current_field, piece_promoting_to)
-			fmt.Println(move_string)
+			move_string := get_move_string(current_piece, original_field, piece_promoting_to, take)
 
-			return pieces_a, 64, true, 0
+			return pieces_a, 64, true, 0, move_string
 		}
 	}
 	//not sure but i think returning the promotion value is obsolet
-	return pieces_a, piece_is_selected, false, promotion
+	return pieces_a, piece_is_selected, false, promotion, ""
 }
 
-func get_move_string (current_piece pieces.Piece,  current_move [2]uint16, piece_promoting string) string {
-	piece_name := give_piece_type(current_piece)
-	fmt.Println(parser.Get_Move_From_Field(current_move))
+func get_move_string(current_piece pieces.Piece, original_pos [2]uint16, piece_promoting string, take string) string {
+	piece_name := current_piece.Give_Piece_Type()
+	original_field := parser.Get_Move_As_String_From_Field(original_pos)
+	new_field := parser.Get_Move_As_String_From_Field(current_piece.Give_Pos())
 
-
-	move_string := piece_name +""
+	move_string := piece_name + original_field + take + new_field + piece_promoting
 
 	return move_string
 }
-
-func give_piece_type (current_piece pieces.Piece) string {
-	piece_type := fmt.Sprintf("%T", current_piece)
-
-
-	switch piece_type {
-	case "*pieces.Pawn":
-		piece_type = "P"
-	case "*pieces.Knight":
-		piece_type = "N"
-	case "*pieces.Bishop":
-		piece_type = "B"
-	case "*pieces.Rook":
-		piece_type = "R"
-	case "*pieces.Queen":
-		piece_type = "Q"
-	case "*pieces.King":
-		piece_type = "K"
-	}
-	return piece_type
-}
-
-
-
 
 func display_message(message_type uint8, a uint16, white_is_current_player bool) {
 
