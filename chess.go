@@ -21,7 +21,7 @@ func main() {
 
 restart_marker:
 
-	var use_clipboard_as_premoves = true
+	var use_clipboard_as_premoves = false
 	var a uint16 = 100
 	var w_x, w_y uint16 = 10 * a, 8 * a
 	var duration_of_premove_animation int = 1
@@ -48,7 +48,7 @@ restart_marker:
 	var promotion uint16 = 0
 	var move_string string
 
-	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, restart_window, game_timer)
+	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
 
 	draw_pieces(pieces_a, w_x, w_y, a)
@@ -63,8 +63,8 @@ restart_marker:
 	for { //gameloop
 
 		if player_change {
-			pieces_a, moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed)
-			fmt.Println(move_string)
+			pieces_a, moves_a, pgn_moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed, move_string, pgn_moves_a)
+			fmt.Println(pgn_moves_a)
 
 			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) //this function sets the current_king_index
 			pieces_a, current_player_has_no_legal_moves = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)                                               //calc the move
@@ -95,10 +95,11 @@ restart_marker:
 			pieces_a, promotion, take = pieces.Move_Piece_To(pieces_a[piece_executing_move], pieces_a[piece_executing_move].Give_Legal_Moves()[index_of_move], moves_counter, pieces_a)
 			if promotion != 64 {
 				pieces_a, piece_promoted_to = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to, m_channel)
+				piece_promoted_to = "=" + piece_promoted_to
 			}
 			premoves_array = premoves_array[1:]
 
-			move_string = get_move_string(pieces_a[piece_executing_move], original_pos, piece_promoted_to, take)
+			move_string = get_move_string(piece_executing_move, original_pos, piece_promoted_to, take, pieces_a)
 
 			time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
 			player_change = true
@@ -205,20 +206,24 @@ restart_marker:
 	}
 }
 
-func game_history_handler(moves_counter int16, moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece, game_history_can_be_changed bool) ([64]pieces.Piece, [][64]pieces.Piece) {
+func game_history_handler(moves_counter int16, moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece, game_history_can_be_changed bool, move_string string, pgn_moves_a []string) ([64]pieces.Piece, [][64]pieces.Piece, []string) {
 	if int(moves_counter) == len(moves_a) { //apppend the moves_array when a new move was made
 		moves_a = append_moves_array(moves_a, pieces_a)
+		pgn_moves_a = append(pgn_moves_a, move_string)
 	} else if !array_one_is_equal_to_array_two(pieces_a, moves_a[moves_counter]) { //if there was a move changed
 		if game_history_can_be_changed { //if it's allowed to change a move in the history, this block replaces the move in the moves array with the current one and cuts of the rest of the array
 			fmt.Println("there was a move changed in the game history")
 			moves_a[moves_counter] = pieces.Copy_Array(pieces_a)
 			moves_a = moves_a[:moves_counter+1]
+
+			pgn_moves_a[moves_counter] = move_string
+			pgn_moves_a = pgn_moves_a[:moves_counter+1]
 		} else { //if it's not allowed it just deletes the move made and resets
 			fmt.Println("changed game history although this is not allowed")
 			pieces_a = pieces.Copy_Array(moves_a[moves_counter])
 		}
 	}
-	return pieces_a, moves_a
+	return pieces_a, moves_a, pgn_moves_a
 }
 
 func time_handler(white_is_current_player bool, white_time_counter time_counter.Counter, black_time_counter time_counter.Counter, pause_button *buttons.Button) {
@@ -354,10 +359,10 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 				pieces_a, piece_promoting_to = pawn_promotion(w_x, w_y, a, int(piece_is_selected), pieces_a, "A", m_channel)
 				piece_promoting_to = "=" + piece_promoting_to
 			}
+			move_string := get_move_string(int(piece_is_selected), original_field, piece_promoting_to, take, pieces_a)
+
 			piece_is_selected = 64
 			promotion = 0
-
-			move_string := get_move_string(current_piece, original_field, piece_promoting_to, take)
 
 			return pieces_a, 64, true, 0, move_string
 		}
@@ -366,14 +371,39 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 	return pieces_a, piece_is_selected, false, promotion, ""
 }
 
-func get_move_string(current_piece pieces.Piece, original_pos [2]uint16, piece_promoting string, take string) string {
-	piece_name := current_piece.Give_Piece_Type()
-	original_field := parser.Get_Move_As_String_From_Field(original_pos)
-	new_field := parser.Get_Move_As_String_From_Field(current_piece.Give_Pos())
+func get_move_string(current_piece_index int, original_pos [2]uint16, piece_promoting string, take string, pieces_a [64]pieces.Piece) string {
+	piece_name := pieces_a[current_piece_index].Give_Piece_Type()
 
-	move_string := piece_name + original_field + take + new_field + piece_promoting
+	if piece_name == "K" && original_pos[0] == 4 && pieces_a[current_piece_index].Give_Pos()[0] == 6 { //short castle
+		return "O-O"
+	} else if piece_name == "K" && original_pos[0] == 4 && pieces_a[current_piece_index].Give_Pos()[0] == 2 { //long castle
+		return "O-O-O"
+	} else {
 
-	return move_string
+		var original_field string = ""
+		var new_field string = parser.Get_Move_As_String_From_Field(pieces_a[current_piece_index].Give_Pos())
+
+		if take == "x" && piece_name == "" { //if a pawn takes someting, the original x cord of this pawn must be included
+			original_field = parser.Translate_Field_Cord_To_PGN_String(original_pos[0], true)
+		}
+
+		if piece_promoting != "" {
+			piece_name = ""
+		}
+
+		//überprüfen ob es noch ein piece gibt welches auf das gleiche feld moven kann und vom selben typ ist
+		if index_of_other_piece, _ := parser.Get_Piece_Index_And_Move_Index(pieces_a, pieces_a[current_piece_index].Give_Pos(), pieces_a[current_piece_index].Is_White_Piece(), piece_name, "0", current_piece_index); index_of_other_piece != 64 {
+			//there is another piece that can execute the same move which means the pgn string is supposed to include more detailed information about the original position of the moved piece
+			if pieces_a[index_of_other_piece].Give_Pos()[0] != original_pos[0] {
+				//fmt.Println("the other piece has a different x cord --> move string will include the x cord")
+				original_field = parser.Translate_Field_Cord_To_PGN_String(original_pos[0], true)
+			} else if pieces_a[index_of_other_piece].Give_Pos()[1] != original_pos[1] {
+				//fmt.Println("the other piece has a different y cord --> move string will include the y cord")
+				original_field = parser.Translate_Field_Cord_To_PGN_String(original_pos[1], false)
+			}
+		}
+		return piece_name + original_field + take + new_field + piece_promoting
+	}
 }
 
 func display_message(message_type uint8, a uint16, white_is_current_player bool) {
@@ -445,7 +475,7 @@ func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piec
 					piece_promoted_to = "Q"
 					pieces_a[pawn_index] = queen
 				} else if x_field_pos == 3 {
-					piece_promoted_to = "K"
+					piece_promoted_to = "N"
 					pieces_a[pawn_index] = knight
 				} else if x_field_pos == 4 {
 					piece_promoted_to = "R"
@@ -503,12 +533,13 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 	return white_is_current_player, current_king_index, false, moves_counter
 }
 
-func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
+func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
 	var one_move_back buttons.Button
 	var one_move_forward buttons.Button
 	var restart_button buttons.Button
 	var pause_button *buttons.Button
 	var moves_a [][64]pieces.Piece
+	var pgn_moves_a []string
 
 	if !restart {
 		gfx.Fenster(w_x, w_y)
@@ -586,7 +617,7 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.
 	white_time_counter := time_counter.New(game_timer)
 	black_time_counter := time_counter.New(game_timer)
 
-	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter
+	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a
 }
 
 func append_moves_array(moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece) [][64]pieces.Piece {

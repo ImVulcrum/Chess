@@ -335,12 +335,12 @@ func (p *King) Calc_Moves(pieces_a [64]Piece, moves_counter int16) {
 	}
 
 	if !blocking_right_rochade && right_rochade_possible != 64 {
-		p.Append_Legal_Moves([3]uint16{7, p.Give_Pos()[1], uint16(right_rochade_possible)})
+		//p.Append_Legal_Moves([3]uint16{7, p.Give_Pos()[1], uint16(right_rochade_possible)})
 		p.Append_Legal_Moves([3]uint16{6, p.Give_Pos()[1], uint16(right_rochade_possible)})
 	}
 	if !blocking_left_rochade && left_rochade_possible != 64 {
-		p.Append_Legal_Moves([3]uint16{0, p.Give_Pos()[1], uint16(left_rochade_possible)})
-		p.Append_Legal_Moves([3]uint16{1, p.Give_Pos()[1], uint16(left_rochade_possible)})
+		//p.Append_Legal_Moves([3]uint16{0, p.Give_Pos()[1], uint16(left_rochade_possible)})
+		p.Append_Legal_Moves([3]uint16{2, p.Give_Pos()[1], uint16(left_rochade_possible)})
 	}
 }
 

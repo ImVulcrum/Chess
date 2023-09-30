@@ -76,23 +76,23 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 
 		if firstChar := rune(move[0]); !unicode.IsUpper(firstChar) { //pawn move cuz the string does not start with an uppercase letter
 			if len(move) == 2 { // Simple Pawn Move
-				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), "P", "0")
+				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), "", "0", 64)
 			} else if len(move) == 3 {
-				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), "P", string(move[0]))
+				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), "", string(move[0]), 64)
 			}
 		} else { //Piece move cuz the move string starts with an uppercase letter
 			if len(move) == 3 { // simple piece move, the first character of the move string indicates the piece that is moving
-				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), string(move[0]), "0")
+				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), string(move[0]), "0", 64)
 			} else if len(move) == 4 { //piece move with position, the first character of the move string indicates the piece that is moving, the second the starting position
-				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), string(move[0]), string(move[1]))
+				piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, field, pieces_a[current_king_index].Is_White_Piece(), string(move[0]), string(move[1]), 64)
 			}
 		}
 
 	} else {
 		if move == "O-O" { //short castle
-			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{7, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0")
+			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{7, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0", 64)
 		} else if move == "O-O-O" { //long castle
-			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{0, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0")
+			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{0, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0", 64)
 		} else {
 			fmt.Println("Error while Reading Premove File: Expected either (O-O) or (O-O-O), got", move, "instead")
 		}
@@ -100,23 +100,24 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 	return piece_executing_move, index_of_correct_legal_move, pawn_promotion_to_piece
 }
 
-func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, white_is_current_player bool, piece_type string, position string) (int, int) {
+func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, white_is_current_player bool, piece_type string, position string, exclude_piece_index int) (int, int) {
 	var current_piece_type string = "A"
 
 	for i := 0; i < len(pieces_a); i++ {
-		if pieces_a[i] != nil && pieces_a[i].Is_White_Piece() == white_is_current_player {
+		if pieces_a[i] != nil && pieces_a[i].Is_White_Piece() == white_is_current_player && i != exclude_piece_index {
 			for k := 0; k < len(pieces_a[i].Give_Legal_Moves()); k++ {
 				if pieces_a[i].Give_Legal_Moves()[k][0] == field[0] && pieces_a[i].Give_Legal_Moves()[k][1] == field[1] { //there is a piece in the correct color with the given move
 					cord, is_x_cord := Translate_PGN_Field_Notation(position)
 
 					if (is_x_cord && cord == pieces_a[i].Give_Pos()[0]) || (!is_x_cord && cord == pieces_a[i].Give_Pos()[1]) || cord == 8 { //check if the piece has the given x or y cord or has no cord specifictaion indicated by cord beeing 8
+
 						switch pieces_a[i].(type) {
 						case *pieces.Rook:
 							current_piece_type = "R"
 						case *pieces.King:
 							current_piece_type = "K"
 						case *pieces.Pawn:
-							current_piece_type = "P"
+							current_piece_type = ""
 						case *pieces.Queen:
 							current_piece_type = "Q"
 						case *pieces.Bishop:
@@ -134,7 +135,10 @@ func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, 
 			}
 		}
 	}
-	panic("Error in Parser: there is no piece is the pieces array that matches the specifications given, which means that the given pgn file is corrupted")
+	if exclude_piece_index == 64 {
+		fmt.Println("Error in Parser: there is no piece is the pieces array that matches the specifications given, which means that the given pgn file is corrupted")
+	}
+	return 64, 0
 }
 
 func Translate_PGN_Field_Notation(cord_string string) (uint16, bool) {
@@ -142,8 +146,8 @@ func Translate_PGN_Field_Notation(cord_string string) (uint16, bool) {
 	var is_x_cord bool
 
 	if len(cord_string) != 1 {
-		fmt.Println("Error: Unexpected lenght of string while trying to convert it from pgn field notation to a square notation")
 		cord = 8
+		fmt.Println("Error: Unexpected lenght of string while trying to convert it from pgn field notation to a square notation")
 	} else {
 		if unicode.IsDigit(rune(cord_string[0])) {
 			is_x_cord = false
@@ -180,6 +184,6 @@ func Translate_Field_Cord_To_PGN_String(field_cord uint16, is_x_cord bool) strin
 	}
 }
 
-func Get_Move_As_String_From_Field(field [2]uint16) string {
+func Get_Move_As_String_From_Field(field [2]uint16) string { //obsolete cuz the string_move array is including at max one cord
 	return (Translate_Field_Cord_To_PGN_String(field[0], true) + Translate_Field_Cord_To_PGN_String(field[1], false))
 }
