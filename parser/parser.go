@@ -90,9 +90,10 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 
 	} else {
 		if move == "O-O" { //short castle
-			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{7, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0", 64)
+			fmt.Println("short castle")
+			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{6, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0", 64)
 		} else if move == "O-O-O" { //long castle
-			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{0, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0", 64)
+			piece_executing_move, index_of_correct_legal_move = Get_Piece_Index_And_Move_Index(pieces_a, [2]uint16{2, pieces_a[current_king_index].Give_Pos()[1]}, pieces_a[current_king_index].Is_White_Piece(), "K", "0", 64)
 		} else {
 			fmt.Println("Error while Reading Premove File: Expected either (O-O) or (O-O-O), got", move, "instead")
 		}
@@ -108,9 +109,7 @@ func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, 
 			for k := 0; k < len(pieces_a[i].Give_Legal_Moves()); k++ {
 				if pieces_a[i].Give_Legal_Moves()[k][0] == field[0] && pieces_a[i].Give_Legal_Moves()[k][1] == field[1] { //there is a piece in the correct color with the given move
 					cord, is_x_cord := Translate_PGN_Field_Notation(position)
-
 					if (is_x_cord && cord == pieces_a[i].Give_Pos()[0]) || (!is_x_cord && cord == pieces_a[i].Give_Pos()[1]) || cord == 8 { //check if the piece has the given x or y cord or has no cord specifictaion indicated by cord beeing 8
-
 						switch pieces_a[i].(type) {
 						case *pieces.Rook:
 							current_piece_type = "R"

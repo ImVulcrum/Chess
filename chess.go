@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"os"
+	"strconv"
 	"time"
 
 	"./buttons"
@@ -28,6 +29,8 @@ restart_marker:
 	var deselect_piece_after_clicking = false
 	var game_history_can_be_changed = true
 	var game_timer int64 = 50000
+	var name_player_white string = "Liam1" //max 8 characters
+	var name_player_black string = "Liam2"
 
 	//~ var restart bool
 	var white_is_current_player bool = false
@@ -48,7 +51,7 @@ restart_marker:
 	var promotion uint16 = 0
 	var move_string string
 
-	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer)
+	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer, name_player_white, name_player_black)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
 
 	draw_pieces(pieces_a, w_x, w_y, a)
@@ -64,7 +67,7 @@ restart_marker:
 
 		if player_change {
 			pieces_a, moves_a, pgn_moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed, move_string, pgn_moves_a)
-			fmt.Println(pgn_moves_a)
+			fmt.Println(moves_counter, pgn_moves_a[moves_counter])
 
 			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) //this function sets the current_king_index
 			pieces_a, current_player_has_no_legal_moves = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)                                               //calc the move
@@ -72,13 +75,16 @@ restart_marker:
 
 			if !use_clipboard_as_premoves || duration_of_premove_animation != 0 { //wenn keine premoves mehr da sind oder premoves da sind und diese gezeichnet werden sollen dann wird das board gezeichnet
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+				draw_moves_sidebar(a, moves_counter-1, pgn_moves_a)
 			}
 
 			if restart_window = restart_handler(current_player_has_no_legal_moves, check, a, white_is_current_player, gor_status); restart_window {
 				goto restart_marker
 			}
 
-			time_handler(white_is_current_player, white_time_counter, black_time_counter, pause_button)
+			if !use_clipboard_as_premoves { //only start the timers if we're not premoving
+				time_handler(white_is_current_player, white_time_counter, black_time_counter, pause_button)
+			}
 		}
 
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
@@ -107,6 +113,8 @@ restart_marker:
 			draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			use_clipboard_as_premoves = false
 			ending_premoves = false
+			draw_moves_sidebar(a, moves_counter-1, pgn_moves_a)
+			//<-m_channel //there is a bug where you can the mouse_handler already reads when the program is still premoving
 			fmt.Println("----- End of Premoves -----")
 		}
 
@@ -383,12 +391,12 @@ func get_move_string(current_piece_index int, original_pos [2]uint16, piece_prom
 		var original_field string = ""
 		var new_field string = parser.Get_Move_As_String_From_Field(pieces_a[current_piece_index].Give_Pos())
 
-		if take == "x" && piece_name == "" { //if a pawn takes someting, the original x cord of this pawn must be included
-			original_field = parser.Translate_Field_Cord_To_PGN_String(original_pos[0], true)
-		}
-
 		if piece_promoting != "" {
 			piece_name = ""
+		}
+
+		if take == "x" && piece_name == "" { //if a pawn takes someting, the original x cord of this pawn must be included
+			original_field = parser.Translate_Field_Cord_To_PGN_String(original_pos[0], true)
 		}
 
 		//überprüfen ob es noch ein piece gibt welches auf das gleiche feld moven kann und vom selben typ ist
@@ -533,7 +541,75 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 	return white_is_current_player, current_king_index, false, moves_counter
 }
 
-func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
+func draw_moves_sidebar(a uint16, moves_counter int16, pgn_moves_a []string) {
+	gfx.UpdateAus()
+	const display_limit int16 = 20
+	const lower_bound uint16 = 55
+
+	gfx.Stiftfarbe(124, 119, 111)
+	gfx.Vollrechteck(8*a+a/10, 8*a/10, 9*a/10, 50*a/10)
+	gfx.Stiftfarbe(31, 32, 33)
+	gfx.Vollrechteck(9*a, 8*a/10, 9*a/10, 50*a/10)
+
+	for i := moves_counter; moves_counter-i <= display_limit && i != 0; i-- {
+		if i%2 != 0 { //white's move
+			var move_number string = strconv.Itoa(int(i+1) / 2)
+
+			//display move number
+			gfx.Stiftfarbe(48, 46, 43)
+			gfx.Vollrechteck(81*a/10, (lower_bound-2)*a/10-5*a/10*uint16((moves_counter-i)/2), 18*a/10, 2*a/10)
+			gfx.SetzeFont("./resources/fonts/firamono.ttf", int(a/5))
+			gfx.Stiftfarbe(200, 200, 200)
+			if len(move_number) == 1 {
+				gfx.SchreibeFont(89*a/10, (lower_bound-2)*a/10-5*a/10*uint16((moves_counter-i)/2), move_number)
+			} else if len(move_number) == 2 {
+				gfx.SchreibeFont(89*a/10, (lower_bound-2)*a/10-5*a/10*uint16((moves_counter-i)/2), move_number)
+			} else if len(move_number) == 3 {
+				gfx.SchreibeFont(88*a/10, (lower_bound-2)*a/10-5*a/10*uint16((moves_counter-i)/2), move_number)
+			}
+
+			//display move
+			gfx.SetzeFont("./resources/fonts/firamono.ttf", int(a/4))
+			gfx.Stiftfarbe(31, 32, 33)
+			gfx.SchreibeFont(81*a/10, lower_bound*a/10-5*a/10*uint16((moves_counter-i)/2), pgn_moves_a[i])
+		} else { //black's move
+			if moves_counter-i >= display_limit-1 { //break if the upper bound has been reached
+				break
+			} else {
+				gfx.SetzeFont("./resources/fonts/firamono.ttf", int(a/4))
+				gfx.Stiftfarbe(124, 119, 111)
+				gfx.SchreibeFont(90*a/10, lower_bound*a/10-5*a/10*uint16((moves_counter-i+1)/2), pgn_moves_a[i])
+			}
+		}
+	}
+	gfx.UpdateAn()
+}
+
+func draw_player_names(name_player_white, name_player_black string, a uint16) {
+	gfx.Stiftfarbe(200, 191, 179)
+	gfx.Vollrechteck(81*a/10, a/10, 18*a/10, 4*a/10)
+	gfx.Vollrechteck(80*a/10, 6*a/10, 20*a/10, 1*a/10)
+
+	gfx.Stiftfarbe(48, 46, 43)
+	gfx.Vollrechteck(89*a/10, a/10, 2*a/10, 5*a/10)
+
+	gfx.Stiftfarbe(48, 46, 43)
+
+	var max_name_lenght int
+
+	if len(name_player_white) >= len(name_player_black) {
+		max_name_lenght = len(name_player_white)
+	} else {
+		max_name_lenght = len(name_player_black)
+	}
+
+	gfx.SetzeFont("./resources/fonts/firamono.ttf", int(a)/max_name_lenght)
+
+	gfx.SchreibeFont(82*a/10, 2*a/10, name_player_white)
+	gfx.SchreibeFont(92*a/10, 2*a/10, name_player_black)
+}
+
+func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_white string, name_player_black string) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
 	var one_move_back buttons.Button
 	var one_move_forward buttons.Button
 	var restart_button buttons.Button
@@ -563,12 +639,10 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64) ([64]pieces.
 
 	gfx.Stiftfarbe(48, 46, 43)
 	gfx.Vollrechteck(8*a, 0, 2*a, 6*a)
-	draw_background(a)
 
-	gfx.Stiftfarbe(124, 119, 111)
-	gfx.Vollrechteck(8*a+a/10, a/10, a, 6*a-a/5)
-	gfx.Stiftfarbe(22, 21, 20)
-	gfx.Vollrechteck(9*a, a/10, a-a/10, 6*a-a/5)
+	//draw_moves_sidebar(a)
+	draw_player_names(name_player_white, name_player_black, a)
+	draw_background(a)
 
 	var pieces_a [64]pieces.Piece
 	var white_king_index int = -1
