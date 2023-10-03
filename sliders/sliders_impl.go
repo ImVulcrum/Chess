@@ -35,51 +35,51 @@ func (s *Slider) Draw(x uint16, y uint16, length uint16, height uint16, thicknes
 	s.thickness = thickness
 	s.max_value = max_value
 	s.default_value = default_value
-	s.x_box_cord = uint16(math.Round(float64((*s).Value*float32((*s).Length)/(*s).max_value + float32((*s).X))))
-	s.Y_box = (*s).Y
-	s.Name = name
-	s.Int = use_int
+	s.x_box_cord = uint16(math.Round(float64(s.value*float32(s.length)/s.max_value + float32(s.x))))
+	s.y_box_cord = s.y
+	s.name = name
+	s.display_int = use_int
 	gfx.Stiftfarbe(88, 88, 88)
-	gfx.Vollrechteck((*s).X, (*s).Y, (*s).Length+(*s).thickness, (*s).Height)
-	if (*s).Int == false {
-		gfx.SchreibeFont((*s).X+(*s).Length+(*s).thickness+20, (*s).Y, (*s).Name+": "+strconv.FormatFloat(float64((*s).Value), 'f', -1, 32))
+	gfx.Vollrechteck(s.x, s.y, s.length+s.thickness, s.height)
+	if !s.display_int {
+		gfx.SchreibeFont(s.x+s.length+s.thickness+20, s.y, s.name+": "+strconv.FormatFloat(float64(s.value), 'f', -1, 32))
 	} else {
-		gfx.SchreibeFont((*s).X+(*s).Length+(*s).thickness+20, (*s).Y, (*s).Name+": "+strconv.Itoa(int(math.Round(float64((*s).Value)))))
+		gfx.SchreibeFont(s.x+s.length+s.thickness+20, s.y, s.name+": "+strconv.Itoa(int(math.Round(float64(s.value)))))
 	}
 	gfx.Stiftfarbe(195, 195, 195)
-	gfx.Vollrechteck((*s).x_box_cord, (*s).Y_box, (*s).thickness, (*s).Height)
+	gfx.Vollrechteck(s.x_box_cord, s.y_box_cord, s.thickness, s.height)
 
 	return s
 }
 
 func (s *Slider) Redraw(ms_x uint16) *Slider {
-	if ms_x > (*s).Length+(*s).X {
-		ms_x = (*s).Length + (*s).X
-	} else if ms_x < (*s).X {
-		ms_x = (*s).X
+	if ms_x > s.length+s.x {
+		ms_x = s.length + s.x
+	} else if ms_x < s.x {
+		ms_x = s.x
 	}
 	gfx.UpdateAus()
 	gfx.Stiftfarbe(0, 0, 0)
-	if (*s).Int == false {
-		gfx.SchreibeFont((*s).X+(*s).Length+(*s).thickness+20, (*s).Y, (*s).Name+": "+strconv.FormatFloat(float64((*s).Value), 'f', -1, 32))
+	if !s.display_int {
+		gfx.SchreibeFont(s.x+s.length+s.thickness+20, s.y, s.name+": "+strconv.FormatFloat(float64(s.value), 'f', -1, 32))
 	} else {
-		gfx.SchreibeFont((*s).X+(*s).Length+(*s).thickness+20, (*s).Y, (*s).Name+": "+strconv.Itoa(int(math.Round(float64((*s).Value)))))
+		gfx.SchreibeFont(s.x+s.length+s.thickness+20, s.y, s.name+": "+strconv.Itoa(int(math.Round(float64(s.value)))))
 	}
-	(*s).x_box_cord = ms_x
-	(*s).Value = (float32((*s).x_box_cord)*(*s).max_value - (*s).max_value*float32((*s).X)) / float32((*s).Length)
+	s.x_box_cord = ms_x
+	s.value = (float32(s.x_box_cord)*s.max_value - s.max_value*float32(s.x)) / float32(s.length)
 	gfx.Stiftfarbe(88, 88, 88)
-	gfx.Vollrechteck((*s).X, (*s).Y, (*s).Length+(*s).thickness, (*s).Height)
-	if (*s).Int == false {
-		gfx.SchreibeFont((*s).X+(*s).Length+(*s).thickness+20, (*s).Y, (*s).Name+": "+strconv.FormatFloat(float64((*s).Value), 'f', -1, 32))
+	gfx.Vollrechteck(s.x, s.y, s.length+s.thickness, s.height)
+	if !s.display_int {
+		gfx.SchreibeFont(s.x+s.length+s.thickness+20, s.y, s.name+": "+strconv.FormatFloat(float64(s.value), 'f', -1, 32))
 	} else {
-		gfx.SchreibeFont((*s).X+(*s).Length+(*s).thickness+20, (*s).Y, (*s).Name+": "+strconv.Itoa(int(math.Round(float64((*s).Value)))))
+		gfx.SchreibeFont(s.x+s.length+s.thickness+20, s.y, s.name+": "+strconv.Itoa(int(math.Round(float64(s.value)))))
 	}
-	// gfx.SchreibeFont((*s).X + (*s).Length + (*s).thickness + 20, (*s).Y, (*s).Name + ": " + strconv.FormatFloat(float64((*s).Value), 'f', -1, 32))
+	// gfx.SchreibeFont(s.x + s.length + s.thickness + 20, s.y, s.Name + ": " + strconv.FormatFloat(float64(s.value), 'f', -1, 32))
 	gfx.Stiftfarbe(195, 195, 195)
-	gfx.Vollrechteck((*s).x_box, (*s).Y_box, (*s).thickness, (*s).Height)
+	gfx.Vollrechteck(s.x_box_cord, s.y_box_cord, s.thickness, s.height)
 	gfx.UpdateAn()
 	return s
 }
 
-// x_box = Value * Length / max_value + X
-// Value = x_box * max_value / Length - X
+// x_box = value * length / max_value + x
+// value = x_box * max_value / length - x
