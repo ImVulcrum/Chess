@@ -20,6 +20,10 @@ func main() {
 	fmt.Println("start game")
 	var restart_window bool = false
 
+	gfx.Fenster(400, 400)
+	gfx.TastaturLesen1()
+	gfx.FensterAus()
+
 restart_marker:
 
 	var use_clipboard_as_premoves = false
@@ -50,6 +54,7 @@ restart_marker:
 	var premoves string = get_clipboard_if_asked(use_clipboard_as_premoves)
 	var promotion uint16 = 0
 	var move_string string
+	var take string = ""
 
 	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer, name_player_white, name_player_black)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
@@ -67,7 +72,6 @@ restart_marker:
 
 		if player_change {
 			pieces_a, moves_a, pgn_moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed, move_string, pgn_moves_a)
-			fmt.Println(moves_counter, pgn_moves_a[moves_counter])
 
 			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) //this function sets the current_king_index
 			pieces_a, current_player_has_no_legal_moves = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)                                               //calc the move
@@ -88,14 +92,8 @@ restart_marker:
 		}
 
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
-			var promotion uint16 = 0
-			var take string = ""
 			var piece_promoted_to string = ""
-
-			fmt.Println("premove:", premoves_array[0])
-
 			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index)
-
 			var original_pos [2]uint16 = pieces_a[piece_executing_move].Give_Pos()
 
 			pieces_a, promotion, take = pieces.Move_Piece_To(pieces_a[piece_executing_move], pieces_a[piece_executing_move].Give_Legal_Moves()[index_of_move], moves_counter, pieces_a)
@@ -103,19 +101,19 @@ restart_marker:
 				pieces_a, piece_promoted_to = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to, m_channel)
 				piece_promoted_to = "=" + piece_promoted_to
 			}
-			premoves_array = premoves_array[1:]
 
 			move_string = get_move_string(piece_executing_move, original_pos, piece_promoted_to, take, pieces_a)
 
-			time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
+			premoves_array = premoves_array[1:]
 			player_change = true
+			time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
+
 		} else if ending_premoves { //soll im optimalfall nur einmal ausgeführt werden
 			draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			use_clipboard_as_premoves = false
 			ending_premoves = false
 			draw_moves_sidebar(a, moves_counter-1, pgn_moves_a)
 			//<-m_channel //there is a bug where you can the mouse_handler already reads when the program is still premoving
-			fmt.Println("----- End of Premoves -----")
 		}
 
 		if !use_clipboard_as_premoves { //wenn die andere restart methode ausgeführt wird, dann sollt hier noch noch überprüft werden ob restart == false ist, da es sonst zu fehlern kommt
@@ -144,8 +142,7 @@ restart_marker:
 						gor_status <- true
 						goto restart_marker
 					} else if pause_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
-						var pausing bool = pause_button.Switch(38, 37, 34)
-						if pausing {
+						if pause_button.Switch(38, 37, 34) {
 							white_time_counter.Stop_Counting()
 							black_time_counter.Stop_Counting()
 						} else if white_is_current_player {
@@ -168,7 +165,7 @@ restart_marker:
 
 						} else if piece_is_selected != 64 {
 							//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
-							pieces_a, piece_is_selected, player_change, promotion, move_string = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
+							pieces_a, piece_is_selected, player_change, move_string = move_if_current_field_is_in_legal_moves(current_field, pieces_a, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
 
 							//Deselect sobald ein Piece ausgewählt ist: wenn auf kein Piece geklickt wurde, oder auf ein gegnerisches Piece geklickt wurde, wird das ausgewählte Piece deselected
 							//mit der Option deselect_piece_after_clicking kann eingestellt werde, ob auch deselected werden soll wenn auf dasslebe piece nocheinmal geklickt wurde
@@ -186,7 +183,7 @@ restart_marker:
 
 					if piece_is_selected != 64 {
 						//überprüfen ob in current legal moves
-						pieces_a, piece_is_selected, player_change, promotion, move_string = move_if_current_field_is_in_legal_moves(current_field, pieces_a, promotion, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
+						pieces_a, piece_is_selected, player_change, move_string = move_if_current_field_is_in_legal_moves(current_field, pieces_a, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
 
 						//Deselect sobald ein Piece ausgewählt ist: wenn auf keinem Piece losgelassen wurde oder auf ein generisches Piece losgelassen wurde oder wenn auf einem eigenen piece losgelassen wurde
 						if (temp_current_piece == nil) || (temp_current_piece != nil && ((temp_current_piece.Is_White_Piece() != white_is_current_player) || (temp_current_piece.Is_White_Piece() == white_is_current_player && temp_current_piece.Give_Pos() != current_piece.Give_Pos()))) {
@@ -212,6 +209,10 @@ restart_marker:
 			}
 		}
 	}
+}
+
+func start_menu() { //this function is supposed to define the buttons, slider and text boxes and return the values afterwards to the section of self definable variables
+
 }
 
 func game_history_handler(moves_counter int16, moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece, game_history_can_be_changed bool, move_string string, pgn_moves_a []string) ([64]pieces.Piece, [][64]pieces.Piece, []string) {
@@ -249,18 +250,16 @@ func time_handler(white_is_current_player bool, white_time_counter time_counter.
 }
 
 func restart_handler(current_player_has_no_legal_moves bool, check bool, a uint16, white_is_current_player bool, gor_status chan bool) bool {
-	var restart_window bool = false
 	if current_player_has_no_legal_moves { //game end / restart
 		if check {
 			display_message(0, a, white_is_current_player)
 		} else {
 			display_message(1, a, white_is_current_player)
 		}
-		restart_window = true
 		gor_status <- true
-		return restart_window
+		return true
 	}
-	return restart_window
+	return false
 }
 
 func mouse_handler(m_channel chan [4]int16, gor_status chan bool) {
@@ -289,18 +288,15 @@ func mouse_handler(m_channel chan [4]int16, gor_status chan bool) {
 }
 
 func get_clipboard_if_asked(use_clipboard bool) string {
-	var premoves string
-
 	if use_clipboard {
 		err := clipboard.Init()
 		if err != nil {
 			panic(err)
 		}
-		premoves = string(clipboard.Read(clipboard.FmtText))
+		return string(clipboard.Read(clipboard.FmtText))
 	} else {
-		premoves = ""
+		return ""
 	}
-	return premoves
 }
 
 func draw_timers(white_time_counter, black_time_counter time_counter.Counter, a uint16) bool {
@@ -337,20 +333,15 @@ func array_one_is_equal_to_array_two(array_a [64]pieces.Piece, array_b [64]piece
 
 func get_current_piece(pieces_a [64]pieces.Piece, current_field [2]uint16) (pieces.Piece, int) {
 	//gibt das
-	var temp_current_piece pieces.Piece = nil
-	var piece_index int
-	for piece_index = 0; piece_index < len(pieces_a); piece_index++ {
-		if pieces_a[piece_index] != nil {
-			if current_field == pieces_a[piece_index].Give_Pos() {
-				temp_current_piece = pieces_a[piece_index]
-				break
-			}
+	for piece_index := 0; piece_index < len(pieces_a); piece_index++ {
+		if pieces_a[piece_index] != nil && current_field == pieces_a[piece_index].Give_Pos() {
+			return pieces_a[piece_index], piece_index
 		}
 	}
-	return temp_current_piece, piece_index
+	return nil, 64
 }
 
-func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [64]pieces.Piece, promotion uint16, piece_is_selected uint16, a, w_x, w_y uint16, current_king_index int, check bool, moves_counter int16, m_channel chan [4]int16) ([64]pieces.Piece, uint16, bool, uint16, string) {
+func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [64]pieces.Piece, piece_is_selected uint16, a, w_x, w_y uint16, current_king_index int, check bool, moves_counter int16, m_channel chan [4]int16) ([64]pieces.Piece, uint16, bool, string) {
 	current_piece := pieces_a[piece_is_selected]
 	current_legal_moves := current_piece.Give_Legal_Moves()
 	for k := 0; k < len(current_legal_moves); k++ {
@@ -359,6 +350,7 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 			var piece_promoting_to string = ""
 			var original_field [2]uint16 = current_piece.Give_Pos()
 			var take string = ""
+			var promotion uint16
 
 			pieces_a, promotion, take = pieces.Move_Piece_To(current_piece, current_legal_moves[k], moves_counter, pieces_a)
 
@@ -369,14 +361,10 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 			}
 			move_string := get_move_string(int(piece_is_selected), original_field, piece_promoting_to, take, pieces_a)
 
-			piece_is_selected = 64
-			promotion = 0
-
-			return pieces_a, 64, true, 0, move_string
+			return pieces_a, 64, true, move_string
 		}
 	}
-	//not sure but i think returning the promotion value is obsolet
-	return pieces_a, piece_is_selected, false, promotion, ""
+	return pieces_a, piece_is_selected, false, ""
 }
 
 func get_move_string(current_piece_index int, original_pos [2]uint16, piece_promoting string, take string, pieces_a [64]pieces.Piece) string {
