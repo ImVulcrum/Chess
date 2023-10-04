@@ -1,7 +1,7 @@
 package textbox
 
 import (
-	gfx "gfxw"
+	gfx "../gfxw"
 )
 
 type tbox struct {
@@ -43,6 +43,10 @@ func (t *tbox) Draw() {
 	t.draw(false)
 }
 
+func (t *tbox) Was_Used() bool {
+	return t.used
+}
+
 func (t *tbox) draw(highlight bool) {
 	if !highlight {
 		gfx.Stiftfarbe(t.bg_color[0], t.bg_color[1], t.bg_color[2])
@@ -58,8 +62,8 @@ func (t *tbox) draw(highlight bool) {
 		gfx.Stiftfarbe(t.fg_color[0], t.fg_color[1], t.fg_color[2])
 	}
 
-	gfx.SetzeFont("unispace.ttf", int(t.h/11*10))
-	gfx.SchreibeFont(t.x+t.h/10, t.y+t.h/9, t.text)
+	gfx.SetzeFont("./resources/fonts/unispace.ttf", int(t.h/11*10))
+	gfx.SchreibeFont(t.x+t.h/10, t.y+t.h/15, t.text)
 }
 
 func (t *tbox) Is_Clicked(x, y uint16) bool {
@@ -101,7 +105,7 @@ func (t *tbox) Write() {
 				t.text = t.text + string(rune(int(key)))
 				t.used = true
 
-			} else if (key >= 48 && key <= 57) || key == 32 { //number
+			} else if (key >= 48 && key <= 57) || key == 32 || key == 46 { //number
 				t.text = t.text + string(rune(int(key)))
 				t.used = true
 
@@ -110,6 +114,9 @@ func (t *tbox) Write() {
 					t.text = t.text[:len(t.text)-1]
 				}
 			} else if key == 27 || key == 13 { //escape or enter --> quit
+				if t.text == "" {
+					t.used = false
+				}
 				if !t.used { //if the text box wasn't used it is supposed to display the enter message again
 					t.text = t.enter_text
 				}
@@ -129,5 +136,9 @@ func (t *tbox) Write() {
 }
 
 func (t *tbox) Get_Text() string {
-	return t.text
+	if !t.used {
+		return ""
+	} else {
+		return t.text
+	}
 }

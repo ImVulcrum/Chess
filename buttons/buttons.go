@@ -21,6 +21,7 @@ type Button struct {
 	Label_Offset uint16
 	font_size    int
 	state        bool
+	active       bool
 }
 
 func New(x uint16, y uint16, length uint16, height uint16, name string, r, g, b, r_label, g_label, b_label uint8, label_offset uint16, font_size int) *Button {
@@ -39,19 +40,22 @@ func New(x uint16, y uint16, length uint16, height uint16, name string, r, g, b,
 	(*button).Label_Offset = label_offset
 	(*button).font_size = font_size
 	(*button).state = false
+	(*button).active = true
 	return button
 }
 
 func (b *Button) Draw() {
-	gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)
-	gfx.Stiftfarbe(b.R, b.G, b.B)
-	gfx.Vollrechteck((*b).X, (*b).Y, (*b).Length, (*b).Height)
-	gfx.Stiftfarbe(b.R_Label, b.G_Label, b.B_Label)
-	gfx.SchreibeFont((*b).X+(*b).Label_Offset, (*b).Y+(*b).Height/10, (*b).Name)
+	if b.active {
+		gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)
+		gfx.Stiftfarbe(b.R, b.G, b.B)
+		gfx.Vollrechteck((*b).X, (*b).Y, (*b).Length, (*b).Height)
+		gfx.Stiftfarbe(b.R_Label, b.G_Label, b.B_Label)
+		gfx.SchreibeFont((*b).X+(*b).Label_Offset, (*b).Y+(*b).Height/10, (*b).Name)
+	}
 }
 
 func (b *Button) Is_Clicked(x, y uint16) bool {
-	if x >= b.X && x <= b.X+b.Length && y >= b.Y && y <= b.Y+b.Height {
+	if b.active && x >= b.X && x <= b.X+b.Length && y >= b.Y && y <= b.Y+b.Height {
 		gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)
 		gfx.Stiftfarbe(0, 0, 0)
 		gfx.Transparenz(120)
@@ -71,15 +75,27 @@ func (b *Button) Give_State() bool {
 	return b.state
 }
 
+func (b *Button) Deactivate() {
+	b.active = false
+}
+
+func (b *Button) Activate() {
+	b.active = true
+}
+
+func (b *Button) Is_Active() bool {
+	return b.active
+}
+
 func (b *Button) Switch(re, gr, bl uint8) bool {
-	if b.state {
+	if b.active && b.state {
 		b.state = false
 		gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)
 		gfx.Stiftfarbe(b.R, b.G, b.B)
 		gfx.Vollrechteck(b.X, b.Y, b.Length, b.Height)
 		gfx.Stiftfarbe(b.R_Label, b.G_Label, b.B_Label)
 		gfx.SchreibeFont(b.X+b.Label_Offset, b.Y+b.Height/10, b.Name)
-	} else {
+	} else if b.active && !b.state {
 		b.state = true
 		gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)
 		gfx.Stiftfarbe(re, gr, bl)

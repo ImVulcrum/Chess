@@ -6,4 +6,5 @@ type Box interface {
 	Write()
 	Get_Text() string
 	If_Clicked_Write(x, y uint16)
+	Was_Used() bool
 }

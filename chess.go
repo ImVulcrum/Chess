@@ -13,6 +13,8 @@ import (
 	"./imaging"
 	"./parser"
 	"./pieces"
+	"./sliders"
+	"./textbox"
 	"./time_counter"
 )
 
@@ -20,23 +22,16 @@ func main() {
 	fmt.Println("start game")
 	var restart_window bool = false
 
-	gfx.Fenster(400, 400)
-	gfx.TastaturLesen1()
-	gfx.FensterAus()
+	var start_window_size uint16 = 400
+	var deselect_piece_after_clicking = false
+	gfx.Fenster(start_window_size, start_window_size)
+	game_timer, friendly_game, duration_of_premove_animation, use_clipboard_as_premoves, name_player_white, name_player_black, a := start_menu(start_window_size)
 
 restart_marker:
 
-	var use_clipboard_as_premoves = false
-	var a uint16 = 100
-	var w_x, w_y uint16 = 10 * a, 8 * a
-	var duration_of_premove_animation int = 1
-	var deselect_piece_after_clicking = false
-	var game_history_can_be_changed = true
-	var game_timer int64 = 50000
-	var name_player_white string = "Liam1" //max 8 characters
-	var name_player_black string = "Liam2"
-
 	//~ var restart bool
+	var game_history_can_be_changed bool = friendly_game
+	var w_x, w_y uint16 = 10 * a, 8 * a
 	var white_is_current_player bool = false
 	var player_change bool = true
 	var current_king_index int
@@ -86,7 +81,7 @@ restart_marker:
 				goto restart_marker
 			}
 
-			if !use_clipboard_as_premoves { //only start the timers if we're not premoving
+			if !use_clipboard_as_premoves && !friendly_game && int(moves_counter) == len(moves_a) { //only start the timers if we're not premoving
 				time_handler(white_is_current_player, white_time_counter, black_time_counter, pause_button)
 			}
 		}
@@ -141,7 +136,7 @@ restart_marker:
 						restart_window = true
 						gor_status <- true
 						goto restart_marker
-					} else if pause_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
+					} else if int(moves_counter) == len(moves_a) && pause_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						if pause_button.Switch(38, 37, 34) {
 							white_time_counter.Stop_Counting()
 							black_time_counter.Stop_Counting()
@@ -201,18 +196,95 @@ restart_marker:
 			default:
 				time.Sleep(5 * time.Millisecond)
 			}
-			if draw_timers(white_time_counter, black_time_counter, a) {
+			if !friendly_game && draw_timers(white_time_counter, black_time_counter, a) {
 				display_message(0, a, white_is_current_player)
 				restart_window = true
+				fmt.Println("restart")
 				gor_status <- true
+				fmt.Println("dfdsg")
 				goto restart_marker
 			}
 		}
 	}
 }
 
-func start_menu() { //this function is supposed to define the buttons, slider and text boxes and return the values afterwards to the section of self definable variables
+func start_menu(start_window_size uint16) (int64, bool, int, bool, string, string, uint16) { //this function is supposed to define the buttons, slider and text boxes and return the values afterwards to the section of self definable variables
+	var bg_color [3]uint8 = [3]uint8{24, 24, 24}
+	var primary_color [3]uint8 = [3]uint8{70, 70, 70}
+	var secondary_color [3]uint8 = [3]uint8{204, 204, 204}
+	var highlight_color1 [3]uint8 = [3]uint8{150, 0, 4}
+	var highlight_color2 [3]uint8 = [3]uint8{0, 94, 4}
 
+	//deselcet piece after clicking
+	//start
+
+	gfx.Stiftfarbe(bg_color[0], bg_color[1], bg_color[2])
+	gfx.Vollrechteck(0, 0, start_window_size, start_window_size)
+
+	gfx.Stiftfarbe(secondary_color[0], secondary_color[1], secondary_color[2])
+	gfx.SetzeFont("./resources/fonts/punk.ttf", int(start_window_size/12))
+	gfx.SchreibeFont(start_window_size/26*10, start_window_size/90, "Chess")
+
+	var name_player_white textbox.Box = textbox.New(start_window_size/20, start_window_size/6, start_window_size/14, start_window_size/12*10, primary_color, secondary_color, highlight_color1, 26, "Enter name of player white")
+	var name_player_black textbox.Box = textbox.New(start_window_size/20, start_window_size/4, start_window_size/14, start_window_size/12*10, primary_color, secondary_color, highlight_color1, 26, "Enter name of player black")
+	name_player_white.Draw()
+	name_player_black.Draw()
+
+	var m_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/25*10, start_window_size/2, start_window_size/20, start_window_size/40, 0, 59, 10, "minutes", true, primary_color, secondary_color, bg_color)
+	var s_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/21*10, start_window_size/2, start_window_size/20, start_window_size/40, 0, 60, 0, "seconds", true, primary_color, secondary_color, bg_color)
+	var w_size sliders.Slider = sliders.New(start_window_size/20, start_window_size/18*10, start_window_size/2, start_window_size/20, start_window_size/40, 1, 150, 100, "size", true, primary_color, secondary_color, bg_color)
+	var p_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/16*10, start_window_size/2, start_window_size/20, start_window_size/40, 0, 200, 1, "p time", true, primary_color, secondary_color, bg_color)
+	m_time.Draw()
+	s_time.Draw()
+	w_size.Draw()
+	p_time.Draw()
+
+	var friendly_game buttons.Button = *buttons.New(start_window_size/20, start_window_size/13*10, start_window_size/22*10, start_window_size/14, "Friendly Game", highlight_color1[0], highlight_color1[1], highlight_color1[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
+	friendly_game.Draw()
+	var use_premoves buttons.Button = *buttons.New(start_window_size/18*10, start_window_size/13*10, start_window_size/25*10, start_window_size/14, "Use Premoves", highlight_color2[0], highlight_color2[1], highlight_color2[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
+	use_premoves.Draw()
+	var start buttons.Button = *buttons.New(start_window_size/25*10, start_window_size/11*10, start_window_size/50*10, start_window_size/14, "Start", primary_color[0], primary_color[1], primary_color[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/50, int(start_window_size)/19)
+	start.Draw()
+
+	for {
+		button, status, m_x, m_y := gfx.MausLesen1()
+
+		if button == 1 && status == 1 {
+			name_player_white.If_Clicked_Write(m_x, m_y)
+			name_player_black.If_Clicked_Write(m_x, m_y)
+
+			m_time.If_Clicked_Draw(m_x, m_y)
+			s_time.If_Clicked_Draw(m_x, m_y)
+			w_size.If_Clicked_Draw(m_x, m_y)
+			p_time.If_Clicked_Draw(m_x, m_y)
+
+			if friendly_game.Is_Clicked(m_x, m_y) {
+				if friendly_game.Switch(highlight_color2[0], highlight_color2[1], highlight_color2[2]) {
+					m_time.Deactivate()
+					s_time.Deactivate()
+				} else {
+					m_time.Activate()
+					s_time.Activate()
+				}
+			} else if use_premoves.Is_Clicked(m_x, m_y) {
+				if use_premoves.Switch(highlight_color1[0], highlight_color1[1], highlight_color1[2]) {
+					p_time.Deactivate()
+				} else {
+					p_time.Activate()
+				}
+			} else if start.Is_Clicked(m_x, m_y) {
+				var game_time int64 = int64(m_time.Get_Value())*60*1000 + int64(s_time.Get_Value())*1000
+
+				if friendly_game.Give_State() {
+					game_time = 0
+				}
+
+				gfx.FensterAus()
+				return game_time, friendly_game.Give_State(), int(p_time.Get_Value()), !use_premoves.Give_State(), name_player_white.Get_Text(), name_player_black.Get_Text(), uint16(w_size.Get_Value())
+			}
+
+		}
+	}
 }
 
 func game_history_handler(moves_counter int16, moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece, game_history_can_be_changed bool, move_string string, pgn_moves_a []string) ([64]pieces.Piece, [][64]pieces.Piece, []string) {
@@ -236,17 +308,21 @@ func game_history_handler(moves_counter int16, moves_a [][64]pieces.Piece, piece
 }
 
 func time_handler(white_is_current_player bool, white_time_counter time_counter.Counter, black_time_counter time_counter.Counter, pause_button *buttons.Button) {
+	// if pause_button.Is_Active() {
 	if pause_button.Give_State() {
 		pause_button.Switch(0, 0, 0)
 	}
 	if white_is_current_player {
+		white_time_counter.Stop_Counting()
 		black_time_counter.Stop_Counting()
 		white_time_counter.Init_Counting()
 
 	} else if !white_is_current_player {
+		black_time_counter.Stop_Counting()
 		white_time_counter.Stop_Counting()
 		black_time_counter.Init_Counting()
 	}
+	// }
 }
 
 func restart_handler(current_player_has_no_legal_moves bool, check bool, a uint16, white_is_current_player bool, gor_status chan bool) bool {
@@ -441,7 +517,6 @@ func display_message(message_type uint8, a uint16, white_is_current_player bool)
 	gfx.Transparenz(0)
 	gfx.UpdateAn()
 	gfx.TastaturLesen1()
-
 }
 
 func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece, premoved string, m_channel chan [4]int16) ([64]pieces.Piece, string) {
@@ -583,7 +658,14 @@ func draw_player_names(name_player_white, name_player_black string, a uint16) {
 
 	gfx.Stiftfarbe(48, 46, 43)
 
-	var max_name_lenght int
+	var max_name_lenght int = 1
+
+	if name_player_white == "" {
+		name_player_white = "White"
+	}
+	if name_player_black == "" {
+		name_player_black = "Black"
+	}
 
 	if len(name_player_white) >= len(name_player_black) {
 		max_name_lenght = len(name_player_white)
@@ -598,12 +680,13 @@ func draw_player_names(name_player_white, name_player_black string, a uint16) {
 }
 
 func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_white string, name_player_black string) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
-	var one_move_back buttons.Button
-	var one_move_forward buttons.Button
-	var restart_button buttons.Button
-	var pause_button *buttons.Button
 	var moves_a [][64]pieces.Piece
 	var pgn_moves_a []string
+
+	var one_move_back buttons.Button = *buttons.New(8*a+a/10, 7*a+a/10, a-a/5, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
+	var one_move_forward buttons.Button = *buttons.New(9*a+a/10, 7*a+a/10, a-a/5, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
+	var restart_button buttons.Button = *buttons.New(8*a+a/10, 65*a/10, a-a/15, 3*a/10, "restart", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
+	var pause_button *buttons.Button = buttons.New(9*a+a/6, 65*a/10, a-a/4, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
 
 	if !restart {
 		gfx.Fenster(w_x, w_y)
@@ -611,15 +694,15 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_
 		rescale_image(a)
 	}
 
-	one_move_back = *buttons.New(8*a+a/10, 7*a+a/10, a-a/5, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
-	one_move_forward = *buttons.New(9*a+a/10, 7*a+a/10, a-a/5, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
-	restart_button = *buttons.New(8*a+a/10, 65*a/10, a-a/15, 3*a/10, "restart", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
-	pause_button = buttons.New(9*a+a/6, 65*a/10, a-a/4, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
+	if game_timer == 0 {
+		pause_button.Deactivate()
+	}
 
 	gfx.Stiftfarbe(86, 82, 77)
 	gfx.Vollrechteck(8*a, 7*a, 2*a, a)
 	gfx.Stiftfarbe(48, 46, 43)
 	gfx.Vollrechteck(8*a, 6*a, 2*a, a)
+
 	one_move_back.Draw()
 	one_move_forward.Draw()
 	restart_button.Draw()
