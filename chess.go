@@ -51,7 +51,7 @@ restart_marker:
 	var move_string string
 	var take string = ""
 
-	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer, name_player_white, name_player_black)
+	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, save_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer, name_player_white, name_player_black)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
 
 	draw_pieces(pieces_a, w_x, w_y, a)
@@ -136,6 +136,9 @@ restart_marker:
 						restart_window = true
 						gor_status <- true
 						goto restart_marker
+					}else if save_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
+						fmt.Println("save")
+						fmt.Println(parser.Return_PGN_String(pgn_moves_a, name_player_white, name_player_white))
 					} else if int(moves_counter) == len(moves_a) && pause_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						if pause_button.Switch(38, 37, 34) {
 							white_time_counter.Stop_Counting()
@@ -274,13 +277,22 @@ func start_menu(start_window_size uint16) (int64, bool, int, bool, string, strin
 				}
 			} else if start.Is_Clicked(m_x, m_y) {
 				var game_time int64 = int64(m_time.Get_Value())*60*1000 + int64(s_time.Get_Value())*1000
+				var name_player_white_string string = name_player_white.Get_Text()
+				var name_player_black_string string = name_player_black.Get_Text()
 
 				if friendly_game.Give_State() {
 					game_time = 0
 				}
 
+				if name_player_white_string == "" {
+					name_player_white_string = "White"
+				}
+				if name_player_black_string == "" {
+					name_player_black_string = "Black"
+				}
+
 				gfx.FensterAus()
-				return game_time, friendly_game.Give_State(), int(p_time.Get_Value()), !use_premoves.Give_State(), name_player_white.Get_Text(), name_player_black.Get_Text(), uint16(w_size.Get_Value())
+				return game_time, friendly_game.Give_State(), int(p_time.Get_Value()), !use_premoves.Give_State(), name_player_white_string, name_player_black_string, uint16(w_size.Get_Value())
 			}
 
 		}
@@ -380,15 +392,15 @@ func draw_timers(white_time_counter, black_time_counter time_counter.Counter, a 
 
 	gfx.UpdateAus()
 	gfx.Stiftfarbe(86, 82, 77)
-	gfx.Vollrechteck(81*a/10, 60*a/10, 2*a-2*a/10, a-65*a/100)
+	gfx.Vollrechteck(81*a/10, 57*a/10, 2*a-2*a/10, a-65*a/100)
 	gfx.Stiftfarbe(48, 46, 43)
-	gfx.Vollrechteck(89*a/10, 60*a/10, a-8*a/10, a-65*a/100)
+	gfx.Vollrechteck(89*a/10, 57*a/10, a-8*a/10, a-65*a/100)
 	gfx.Stiftfarbe(255, 255, 255)
 	white_string, white_has_no_time := white_time_counter.Return_Current_Counter()
 	black_string, black_has_no_time := black_time_counter.Return_Current_Counter()
 	black_time_counter.Return_Current_Counter()
-	gfx.SchreibeFont(81*a/10, 60*a/10, white_string)
-	gfx.SchreibeFont(91*a/10, 60*a/10, black_string)
+	gfx.SchreibeFont(81*a/10, 57*a/10, white_string)
+	gfx.SchreibeFont(91*a/10, 57*a/10, black_string)
 	gfx.UpdateAn()
 
 	if white_has_no_time || black_has_no_time {
@@ -606,13 +618,13 @@ func change_player(white_is_current_player bool, white_king_index, black_king_in
 
 func draw_moves_sidebar(a uint16, moves_counter int16, pgn_moves_a []string) {
 	gfx.UpdateAus()
-	const display_limit int16 = 20
-	const lower_bound uint16 = 55
+	const display_limit int16 = 18
+	const lower_bound uint16 = 52
 
 	gfx.Stiftfarbe(124, 119, 111)
-	gfx.Vollrechteck(8*a+a/10, 8*a/10, 9*a/10, 50*a/10)
+	gfx.Vollrechteck(8*a+a/10, 8*a/10, 9*a/10, (lower_bound-4)*a/10)
 	gfx.Stiftfarbe(31, 32, 33)
-	gfx.Vollrechteck(9*a, 8*a/10, 9*a/10, 50*a/10)
+	gfx.Vollrechteck(9*a, 8*a/10, 9*a/10, (lower_bound-4)*a/10)
 
 	for i := moves_counter; moves_counter-i <= display_limit && i != 0; i-- {
 		if i%2 != 0 { //white's move
@@ -660,13 +672,6 @@ func draw_player_names(name_player_white, name_player_black string, a uint16) {
 
 	var max_name_lenght int = 1
 
-	if name_player_white == "" {
-		name_player_white = "White"
-	}
-	if name_player_black == "" {
-		name_player_black = "Black"
-	}
-
 	if len(name_player_white) >= len(name_player_black) {
 		max_name_lenght = len(name_player_white)
 	} else {
@@ -679,14 +684,15 @@ func draw_player_names(name_player_white, name_player_black string, a uint16) {
 	gfx.SchreibeFont(92*a/10, 2*a/10, name_player_black)
 }
 
-func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_white string, name_player_black string) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
+func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_white string, name_player_black string) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
 	var moves_a [][64]pieces.Piece
 	var pgn_moves_a []string
 
-	var one_move_back buttons.Button = *buttons.New(8*a+a/10, 7*a+a/10, a-a/5, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
-	var one_move_forward buttons.Button = *buttons.New(9*a+a/10, 7*a+a/10, a-a/5, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
-	var restart_button buttons.Button = *buttons.New(8*a+a/10, 65*a/10, a-a/15, 3*a/10, "restart", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
-	var pause_button *buttons.Button = buttons.New(9*a+a/6, 65*a/10, a-a/4, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
+	var one_move_back buttons.Button = *buttons.New(81*a/10, 7*a+a/10, 8*a/10, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
+	var one_move_forward buttons.Button = *buttons.New(91*a/10, 7*a+a/10, 8*a/10, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
+	var restart_button buttons.Button = *buttons.New(8*a+a/7, 62*a/10, 17*a/10, 3*a/10, "restart game", 86, 82, 77, 200, 200, 200, (a / 10), int(a/5))
+	var pause_button *buttons.Button = buttons.New(91*a/10, 66*a/10, 8*a/10, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
+	var save_button *buttons.Button = buttons.New(81*a/10, 66*a/10, 8*a/10, 3*a/10, "save", 86, 82, 77, 200, 200, 200, (a / 7), int(a/5))
 
 	if !restart {
 		gfx.Fenster(w_x, w_y)
@@ -707,6 +713,7 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_
 	one_move_forward.Draw()
 	restart_button.Draw()
 	pause_button.Draw()
+	save_button.Draw()
 
 	gfx.Stiftfarbe(48, 46, 43)
 	gfx.Vollrechteck(8*a, 0, 2*a, 6*a)
@@ -762,7 +769,7 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_
 	white_time_counter := time_counter.New(game_timer)
 	black_time_counter := time_counter.New(game_timer)
 
-	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a
+	return pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, save_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a
 }
 
 func append_moves_array(moves_a [][64]pieces.Piece, pieces_a [64]pieces.Piece) [][64]pieces.Piece {
