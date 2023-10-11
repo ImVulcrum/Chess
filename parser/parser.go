@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 	"time"
+	"os"
 
 	"../pieces"
 )
@@ -101,16 +102,15 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 	return piece_executing_move, index_of_correct_legal_move, pawn_promotion_to_piece
 }
 
-func Return_PGN_String (pgn_moves_a []string, name_player_white string, name_player_black string) string {
-	var pgn_string string
+func Write_PGN_File (pgn_moves_a []string, name_player_white string, name_player_black string) {
 	var moves_counter int = 1
 	pgn_moves_a = pgn_moves_a[1:]
 	year, month, day := time.Now().Date()
-
-	pgn_string = pgn_string + `[Date "` + strconv.Itoa(year) + "."  + strconv.Itoa(int(month)) + "." + strconv.Itoa(day) + `"]\n`
-	pgn_string = pgn_string + `[Identifier "` + (time.Now().String()) + `"]\n`
-	pgn_string = pgn_string + `[White "` + name_player_white + `"]\n`
-	pgn_string = pgn_string + `[Black "` + name_player_black + `"]\n\n`
+	var date string = `[Date "` + strconv.Itoa(year) + "."  + strconv.Itoa(int(month)) + "." + strconv.Itoa(day) + `"]`
+	var identifier string = `[Identifier "` + (strconv.Itoa(int(time.Now().UnixMilli()))) + `"]`
+	var white string = `[White "` + name_player_white + `"]`
+	var black string = `[Black "` + name_player_black + `"]`
+	var pgn_string string
 
 	for i:=0; i<len(pgn_moves_a); i++ {
 		if i%2 == 0 {
@@ -119,7 +119,10 @@ func Return_PGN_String (pgn_moves_a []string, name_player_white string, name_pla
 		}
 		pgn_string = pgn_string + pgn_moves_a[i] + " "
 	}
-	return pgn_string
+
+	file, _ := os.Create("./" + name_player_white + " vs " + name_player_black + " " + strconv.Itoa(year) + "-"  + strconv.Itoa(int(month)) + "-" + strconv.Itoa(day) + "-" + strconv.Itoa(int(time.Now().UnixMilli())) + ".pgn")
+
+    file.WriteString(date + "\n" + identifier + "\n" + white + "\n" + black + "\n\n" + pgn_string)
 }
 
 func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, white_is_current_player bool, piece_type string, position string, exclude_piece_index int) (int, int) {

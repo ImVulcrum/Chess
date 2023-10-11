@@ -137,8 +137,8 @@ restart_marker:
 						gor_status <- true
 						goto restart_marker
 					}else if save_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
-						fmt.Println("save")
-						fmt.Println(parser.Return_PGN_String(pgn_moves_a, name_player_white, name_player_white))
+						fmt.Println("saved")
+						parser.Write_PGN_File(pgn_moves_a, name_player_white, name_player_black)
 					} else if int(moves_counter) == len(moves_a) && pause_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						if pause_button.Switch(38, 37, 34) {
 							white_time_counter.Stop_Counting()
@@ -149,7 +149,6 @@ restart_marker:
 							black_time_counter.Init_Counting()
 						}
 					} else {
-
 						current_field = calc_field(a, uint16(mouse_input[2]), uint16(mouse_input[3]), 0)
 						temp_current_piece, piece_index = get_current_piece(pieces_a, current_field)
 
@@ -339,10 +338,14 @@ func time_handler(white_is_current_player bool, white_time_counter time_counter.
 
 func restart_handler(current_player_has_no_legal_moves bool, check bool, a uint16, white_is_current_player bool, gor_status chan bool) bool {
 	if current_player_has_no_legal_moves { //game end / restart
+		var review bool
 		if check {
-			display_message(0, a, white_is_current_player)
+			review = display_message(0, a, white_is_current_player)
 		} else {
-			display_message(1, a, white_is_current_player)
+			review = display_message(1, a, white_is_current_player)
+		}
+		if review {
+			return false
 		}
 		gor_status <- true
 		return true
@@ -490,7 +493,8 @@ func get_move_string(current_piece_index int, original_pos [2]uint16, piece_prom
 	}
 }
 
-func display_message(message_type uint8, a uint16, white_is_current_player bool) {
+func display_message(message_type uint8, a uint16, white_is_current_player bool) bool {
+	gfx.Archivieren()
 
 	gfx.Stiftfarbe(0, 0, 0)
 	gfx.Transparenz(70)
@@ -528,7 +532,16 @@ func display_message(message_type uint8, a uint16, white_is_current_player bool)
 
 	gfx.Transparenz(0)
 	gfx.UpdateAn()
-	gfx.TastaturLesen1()
+	key, _, _  := gfx.TastaturLesen1()
+
+
+	if key == 13 && message_type != 2 {
+		return false
+	}	else if key != 13 && message_type != 2{
+		gfx.Restaurieren(0,0, 8*a, 8*a)
+		return true
+	}
+	return false
 }
 
 func pawn_promotion(w_x, w_y, a uint16, pawn_index int, pieces_a [64]pieces.Piece, premoved string, m_channel chan [4]int16) ([64]pieces.Piece, string) {
