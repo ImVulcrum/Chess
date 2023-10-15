@@ -22,14 +22,14 @@ func main() {
 	fmt.Println("start game")
 	var restart_window bool = false
 
-	var start_window_size uint16 = 400
 	var deselect_piece_after_clicking = false
-	gfx.Fenster(start_window_size, start_window_size)
-	game_timer, friendly_game, duration_of_premove_animation, use_clipboard_as_premoves, name_player_white, name_player_black, a := start_menu(start_window_size)
+	var start_window_width uint16 = 600 //the start window is technically scalable but with resolutions higher than 800 graphical bugs are occuring due to the font size
+	game_timer, friendly_game, duration_of_premove_animation, use_clipboard_as_premoves, name_player_white, name_player_black, a, troll_mode := start_menu(start_window_width / 3 * 2)
 
 restart_marker:
 
 	//~ var restart bool
+	var image_location string = set_image_string(troll_mode)
 	var game_history_can_be_changed bool = friendly_game
 	var w_x, w_y uint16 = 10 * a, 8 * a
 	var white_is_current_player bool = false
@@ -51,7 +51,7 @@ restart_marker:
 	var move_string string
 	var take string = ""
 
-	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer, name_player_white, name_player_black)
+	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer, name_player_white, name_player_black, image_location)
 	premoves_array := parser.Create_Array_Of_Moves(premoves)
 
 	draw_pieces(pieces_a, w_x, w_y, a)
@@ -208,42 +208,44 @@ restart_marker:
 	}
 }
 
-func start_menu(start_window_size uint16) (int64, bool, int, bool, string, string, uint16) { //this function is supposed to define the buttons, slider and text boxes and return the values afterwards to the section of self definable variables
+func start_menu(start_window_size uint16) (int64, bool, int, bool, string, string, uint16, bool) { //this function is supposed to define the buttons, slider and text boxes and return the values afterwards to the section of self definable variables
+	gfx.Fenster(start_window_size/2*3, start_window_size)
+	gfx.Fenstertitel("Chess")
+
 	var bg_color [3]uint8 = [3]uint8{24, 24, 24}
 	var primary_color [3]uint8 = [3]uint8{70, 70, 70}
 	var secondary_color [3]uint8 = [3]uint8{204, 204, 204}
 	var highlight_color1 [3]uint8 = [3]uint8{150, 0, 4}
 	var highlight_color2 [3]uint8 = [3]uint8{0, 94, 4}
 
-	//deselcet piece after clicking
-	//start
-
 	gfx.Stiftfarbe(bg_color[0], bg_color[1], bg_color[2])
-	gfx.Vollrechteck(0, 0, start_window_size, start_window_size)
+	gfx.Vollrechteck(0, 0, start_window_size/2*3, start_window_size)
 
 	gfx.Stiftfarbe(secondary_color[0], secondary_color[1], secondary_color[2])
 	gfx.SetzeFont("./resources/fonts/punk.ttf", int(start_window_size/12))
-	gfx.SchreibeFont(start_window_size/26*10, start_window_size/90, "Chess")
+	gfx.SchreibeFont(start_window_size/2*3/2/12*10, start_window_size/90, "Chess")
 
 	var name_player_white textbox.Box = textbox.New(start_window_size/20, start_window_size/6, start_window_size/14, start_window_size/12*10, primary_color, secondary_color, highlight_color1, 26, "Enter name of player white")
 	var name_player_black textbox.Box = textbox.New(start_window_size/20, start_window_size/4, start_window_size/14, start_window_size/12*10, primary_color, secondary_color, highlight_color1, 26, "Enter name of player black")
 	name_player_white.Draw()
 	name_player_black.Draw()
 
-	var m_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/25*10, start_window_size/2, start_window_size/20, start_window_size/40, 0, 59, 10, "minutes", true, primary_color, secondary_color, bg_color)
-	var s_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/21*10, start_window_size/2, start_window_size/20, start_window_size/40, 0, 60, 0, "seconds", true, primary_color, secondary_color, bg_color)
-	var w_size sliders.Slider = sliders.New(start_window_size/20, start_window_size/18*10, start_window_size/2, start_window_size/20, start_window_size/40, 1, 150, 100, "size", true, primary_color, secondary_color, bg_color)
-	var p_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/16*10, start_window_size/2, start_window_size/20, start_window_size/40, 0, 200, 1, "p time", true, primary_color, secondary_color, bg_color)
+	var m_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/25*10, start_window_size/17*10, start_window_size/20, start_window_size/40, 0, 59, 10, "game time in minutes", true, primary_color, secondary_color, bg_color)
+	var s_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/21*10, start_window_size/17*10, start_window_size/20, start_window_size/40, 0, 60, 0, "game time in seconds", true, primary_color, secondary_color, bg_color)
+	var w_size sliders.Slider = sliders.New(start_window_size/20, start_window_size/18*10, start_window_size/17*10, start_window_size/20, start_window_size/40, 1, 150, 100, "squaresize in pixels", true, primary_color, secondary_color, bg_color)
+	var p_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/16*10, start_window_size/17*10, start_window_size/20, start_window_size/40, 0, 200, 1, "premove time in ms", true, primary_color, secondary_color, bg_color)
 	m_time.Draw()
 	s_time.Draw()
 	w_size.Draw()
 	p_time.Draw()
 
-	var friendly_game buttons.Button = *buttons.New(start_window_size/20, start_window_size/13*10, start_window_size/22*10, start_window_size/14, "Friendly Game", highlight_color1[0], highlight_color1[1], highlight_color1[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
+	var friendly_game buttons.Button = *buttons.New(start_window_size/20, start_window_size/13*10, start_window_size/22*10, start_window_size/14, "friendly game", highlight_color1[0], highlight_color1[1], highlight_color1[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
+	var use_premoves buttons.Button = *buttons.New(start_window_size/18*10, start_window_size/13*10, start_window_size/25*10, start_window_size/14, "use premoves", highlight_color2[0], highlight_color2[1], highlight_color2[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
+	var troll_mode buttons.Button = *buttons.New(start_window_size, start_window_size/13*10, start_window_size/22*10, start_window_size/14, "extreme mode", highlight_color1[0], highlight_color1[1], highlight_color1[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/17)
+	var start buttons.Button = *buttons.New(start_window_size/15*10, start_window_size/11*10, start_window_size/50*10, start_window_size/14, "Start", primary_color[0], primary_color[1], primary_color[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/50, int(start_window_size)/19)
 	friendly_game.Draw()
-	var use_premoves buttons.Button = *buttons.New(start_window_size/18*10, start_window_size/13*10, start_window_size/25*10, start_window_size/14, "Use Premoves", highlight_color2[0], highlight_color2[1], highlight_color2[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
 	use_premoves.Draw()
-	var start buttons.Button = *buttons.New(start_window_size/25*10, start_window_size/11*10, start_window_size/50*10, start_window_size/14, "Start", primary_color[0], primary_color[1], primary_color[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/50, int(start_window_size)/19)
+	troll_mode.Draw()
 	start.Draw()
 
 	for {
@@ -272,15 +274,15 @@ func start_menu(start_window_size uint16) (int64, bool, int, bool, string, strin
 				} else {
 					p_time.Activate()
 				}
+			} else if troll_mode.Is_Clicked(m_x, m_y) {
+				troll_mode.Switch(highlight_color2[0], highlight_color2[1], highlight_color2[2])
 			} else if start.Is_Clicked(m_x, m_y) {
 				var game_time int64 = int64(m_time.Get_Value())*60*1000 + int64(s_time.Get_Value())*1000
-
 				if friendly_game.Give_State() {
 					game_time = 0
 				}
-
 				gfx.FensterAus()
-				return game_time, friendly_game.Give_State(), int(p_time.Get_Value()), !use_premoves.Give_State(), name_player_white.Get_Text(), name_player_black.Get_Text(), uint16(w_size.Get_Value())
+				return game_time, friendly_game.Give_State(), int(p_time.Get_Value()), !use_premoves.Give_State(), name_player_white.Get_Text(), name_player_black.Get_Text(), uint16(w_size.Get_Value()), troll_mode.Give_State()
 			}
 
 		}
@@ -679,7 +681,7 @@ func draw_player_names(name_player_white, name_player_black string, a uint16) {
 	gfx.SchreibeFont(92*a/10, 2*a/10, name_player_black)
 }
 
-func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_white string, name_player_black string) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
+func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_white string, name_player_black string, image_location string) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
 	var moves_a [][64]pieces.Piece
 	var pgn_moves_a []string
 
@@ -691,7 +693,7 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_
 	if !restart {
 		gfx.Fenster(w_x, w_y)
 		gfx.Fenstertitel("Chess")
-		rescale_image(a)
+		rescale_image(a, image_location)
 	}
 
 	if game_timer == 0 {
@@ -824,10 +826,10 @@ func draw_background(a uint16) {
 	}
 }
 
-func rescale_image(a uint16) {
+func rescale_image(a uint16, image_location string) {
 
 	// Open the BMP file
-	file, err := os.Open("./resources/images/Pieces_Source_Original.bmp")
+	file, err := os.Open(image_location)
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return
@@ -864,35 +866,10 @@ func calc_field(a, m_x, m_y, y_offset uint16) [2]uint16 {
 	return current_field
 }
 
-//the old restart works like this:
-//~ pieces_a, white_king_index, black_king_index, moves_counter, check, white_is_current_player, restart, player_change, moves_a, white_time_counter, black_time_counter = restart_game(w_x, w_y, a, one_move_back, one_move_forward, game_timer)
-//~ dragging = false
-//~ empty_channel(m_channel)
-
-// func restart_game(w_x, w_y, a uint16, one_move_back, one_move_forward buttons.Button, game_timer int64) ([64]pieces.Piece, int, int, int16, bool, bool, bool, bool, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter) {
-// 	//this restart function works in parts, the problem is that it does not clear the current piece, which means a piece is technicly already selected after restarting, it seems like clearing the channel is not needed
-// 	pieces_a, white_king_index, black_king_index, _, _, moves_a, white_time_counter, black_time_counter := initialize(w_x, w_y, a, true, game_timer)
-
-// 	return pieces_a, white_king_index, black_king_index, 0, false, false, true, true, moves_a, white_time_counter, black_time_counter
-// }
-
-// func empty_channel(m_channel chan [4]int16) {
-// outer:
-// 	for {
-// 		select {
-// 		case <-m_channel:
-// 		default:
-// 			break outer
-// 		}
-// 	}
-// }
-
-// func calc_a(w_x, w_y uint16) uint16 {
-// 	var a uint16
-// 	if w_x < w_y {
-// 		a = w_x / 8
-// 	} else {
-// 		a = w_y / 8
-// 	}
-// 	return a
-// }
+func set_image_string(troll_mode bool) string {
+	if troll_mode {
+		return "./resources/images/Troll.bmp"
+	} else {
+		return "./resources/images/Pieces_Source_Original.bmp"
+	}
+}
