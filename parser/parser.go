@@ -2,12 +2,12 @@ package parser
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"unicode"
 	"time"
-	"os"
+	"unicode"
 
 	"../pieces"
 )
@@ -64,8 +64,8 @@ func Create_Array_Of_Moves(input_string string) []string {
 
 func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index int) (int, int, string) {
 	var field [2]uint16
-	var piece_executing_move int
-	var index_of_correct_legal_move int
+	var piece_executing_move int = 64
+	var index_of_correct_legal_move int = 64
 	var pawn_promotion_to_piece string = "A" //A indicates that there is no pawn promotion
 
 	if move[len(move)-1] != 'O' { //normal move
@@ -99,30 +99,33 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 			fmt.Println("Error while Reading Premove File: Expected either (O-O) or (O-O-O), got", move, "instead")
 		}
 	}
+	if piece_executing_move == 64 {
+		fmt.Println("\n-------------------------------------------------------------------\n" + `Es gibt kein piece mit dem Move: "` + move + `"` + "\n-------------------------------------------------------------------\n")
+	}
 	return piece_executing_move, index_of_correct_legal_move, pawn_promotion_to_piece
 }
 
-func Write_PGN_File (pgn_moves_a []string, name_player_white string, name_player_black string) {
+func Write_PGN_File(pgn_moves_a []string, name_player_white string, name_player_black string) {
 	var moves_counter int = 1
 	pgn_moves_a = pgn_moves_a[1:]
 	year, month, day := time.Now().Date()
-	var date string = `[Date "` + strconv.Itoa(year) + "."  + strconv.Itoa(int(month)) + "." + strconv.Itoa(day) + `"]`
+	var date string = `[Date "` + strconv.Itoa(year) + "." + strconv.Itoa(int(month)) + "." + strconv.Itoa(day) + `"]`
 	var identifier string = `[Identifier "` + (strconv.Itoa(int(time.Now().UnixMilli()))) + `"]`
 	var white string = `[White "` + name_player_white + `"]`
 	var black string = `[Black "` + name_player_black + `"]`
 	var pgn_string string
 
-	for i:=0; i<len(pgn_moves_a); i++ {
+	for i := 0; i < len(pgn_moves_a); i++ {
 		if i%2 == 0 {
-			pgn_string  = pgn_string + strconv.Itoa(moves_counter) + ". "
+			pgn_string = pgn_string + strconv.Itoa(moves_counter) + ". "
 			moves_counter++
 		}
 		pgn_string = pgn_string + pgn_moves_a[i] + " "
 	}
 
-	file, _ := os.Create("./" + name_player_white + " vs " + name_player_black + " " + strconv.Itoa(year) + "-"  + strconv.Itoa(int(month)) + "-" + strconv.Itoa(day) + "-" + strconv.Itoa(int(time.Now().UnixMilli())) + ".pgn")
+	file, _ := os.Create("./" + name_player_white + " vs " + name_player_black + " " + strconv.Itoa(year) + "-" + strconv.Itoa(int(month)) + "-" + strconv.Itoa(day) + "-" + strconv.Itoa(int(time.Now().UnixMilli())) + ".pgn")
 
-    file.WriteString(date + "\n" + identifier + "\n" + white + "\n" + black + "\n\n" + pgn_string)
+	file.WriteString(date + "\n" + identifier + "\n" + white + "\n" + black + "\n\n" + pgn_string)
 }
 
 func Get_Piece_Index_And_Move_Index(pieces_a [64]pieces.Piece, field [2]uint16, white_is_current_player bool, piece_type string, position string, exclude_piece_index int) (int, int) {

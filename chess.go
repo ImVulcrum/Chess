@@ -59,7 +59,7 @@ restart_marker:
 	display_message(2, a, false)
 
 	m_channel := make(chan [4]int16, 1)
-	gor_status := make(chan bool)
+	gor_status := make(chan bool, 1) //needs to be a buffered channel, indicated by the one, otherwise the program will hold until the channel is empty after puting something to it
 
 	go mouse_handler(m_channel, gor_status)
 
@@ -89,20 +89,23 @@ restart_marker:
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
 			var piece_promoted_to string = ""
 			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index)
-			var original_pos [2]uint16 = pieces_a[piece_executing_move].Give_Pos()
 
-			pieces_a, promotion, take = pieces.Move_Piece_To(pieces_a[piece_executing_move], pieces_a[piece_executing_move].Give_Legal_Moves()[index_of_move], moves_counter, pieces_a)
-			if promotion != 64 {
-				pieces_a, piece_promoted_to = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to, m_channel)
-				piece_promoted_to = "=" + piece_promoted_to
+			if piece_executing_move != 64 { //if there is no move matching the specifications, this code won't be excuted, instead the premove sequence will end at this point (else statement)
+				var original_pos [2]uint16 = pieces_a[piece_executing_move].Give_Pos()
+
+				pieces_a, promotion, take = pieces.Move_Piece_To(pieces_a[piece_executing_move], pieces_a[piece_executing_move].Give_Legal_Moves()[index_of_move], moves_counter, pieces_a)
+				if promotion != 64 {
+					pieces_a, piece_promoted_to = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to, m_channel)
+					piece_promoted_to = "=" + piece_promoted_to
+				}
+				move_string = get_move_string(piece_executing_move, original_pos, piece_promoted_to, take, pieces_a)
+
+				premoves_array = premoves_array[1:]
+				player_change = true
+				time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
+			} else {
+				premoves_array = nil
 			}
-
-			move_string = get_move_string(piece_executing_move, original_pos, piece_promoted_to, take, pieces_a)
-
-			premoves_array = premoves_array[1:]
-			player_change = true
-			time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
-
 		} else if ending_premoves { //soll im optimalfall nur einmal ausgeführt werden
 			draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			use_clipboard_as_premoves = false
@@ -137,7 +140,6 @@ restart_marker:
 						gor_status <- true
 						goto restart_marker
 					} else if save_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
-						fmt.Println("saved")
 						parser.Write_PGN_File(pgn_moves_a, name_player_white, name_player_black)
 					} else if int(moves_counter) == len(moves_a) && pause_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						if pause_button.Switch(38, 37, 34) {
@@ -201,9 +203,7 @@ restart_marker:
 			if !friendly_game && draw_timers(white_time_counter, black_time_counter, a) {
 				display_message(0, a, white_is_current_player)
 				restart_window = true
-				fmt.Println("restart")
 				gor_status <- true
-				fmt.Println("dfdsg")
 				goto restart_marker
 			}
 		}
@@ -225,12 +225,17 @@ func start_menu(start_window_size uint16) (int64, bool, int, bool, string, strin
 
 	gfx.Stiftfarbe(secondary_color[0], secondary_color[1], secondary_color[2])
 	gfx.SetzeFont("./resources/fonts/punk.ttf", int(start_window_size/12))
-	gfx.SchreibeFont(start_window_size/2*3/2/12*10, start_window_size/90, "Chess")
+	gfx.SchreibeFont(start_window_size/2*3/2/12*10, start_window_size/90, "CHESS")
 
-	var name_player_white textbox.Box = textbox.New(start_window_size/20, start_window_size/6, start_window_size/14, start_window_size/12*10, primary_color, secondary_color, highlight_color1, 26, "Enter name of player white")
-	var name_player_black textbox.Box = textbox.New(start_window_size/20, start_window_size/4, start_window_size/14, start_window_size/12*10, primary_color, secondary_color, highlight_color1, 26, "Enter name of player black")
+	var name_player_white textbox.Box = textbox.New(start_window_size/20, start_window_size/6, start_window_size/14, start_window_size/17*10+start_window_size/40, primary_color, secondary_color, highlight_color1, 19, "enter white name...")
+	var name_player_black textbox.Box = textbox.New(start_window_size/20, start_window_size/4, start_window_size/14, start_window_size/17*10+start_window_size/40, primary_color, secondary_color, highlight_color1, 19, "enter black name...")
 	name_player_white.Draw()
 	name_player_black.Draw()
+
+	gfx.SetzeFont("./resources/fonts/unispace.ttf", int(start_window_size/20))
+	gfx.Stiftfarbe(secondary_color[0], secondary_color[1], secondary_color[2])
+	gfx.SchreibeFont(start_window_size/17*10+start_window_size/8, start_window_size/6, "name of white player")
+	gfx.SchreibeFont(start_window_size/17*10+start_window_size/8, start_window_size/4, "name of black player")
 
 	var m_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/25*10, start_window_size/17*10, start_window_size/20, start_window_size/40, 0, 59, 10, "game time in minutes", true, primary_color, secondary_color, bg_color)
 	var s_time sliders.Slider = sliders.New(start_window_size/20, start_window_size/21*10, start_window_size/17*10, start_window_size/20, start_window_size/40, 0, 60, 0, "game time in seconds", true, primary_color, secondary_color, bg_color)
