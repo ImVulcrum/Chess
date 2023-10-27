@@ -1,4 +1,4 @@
-package main
+package main //added some commentary and fixed a bug where the user could make mouse inputs during the premove phase which led to unexpected behaviour
 
 import (
 	"fmt"
@@ -77,18 +77,18 @@ restart_marker:
 				draw_moves_sidebar(a, moves_counter-1, pgn_moves_a)
 			}
 
-			if restart_window = restart_handler(current_player_has_no_legal_moves, check, a, white_is_current_player, gor_status); restart_window {
+			if restart_window = restart_handler(current_player_has_no_legal_moves, check, a, white_is_current_player, gor_status); restart_window { //restart if the premove handler calculated the end of the game
 				goto restart_marker
 			}
 
-			if !use_clipboard_as_premoves && !friendly_game && int(moves_counter) == len(moves_a) { //only start the timers if we're not premoving
+			if !use_clipboard_as_premoves && !friendly_game && int(moves_counter) == len(moves_a) { //only start the timers if we're not premoving and it is a competetive game and the current move is reviewed
 				time_handler(white_is_current_player, white_time_counter, black_time_counter, pause_button)
 			}
 		}
 
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
 			var piece_promoted_to string = ""
-			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index)
+			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index) //get the move (so that the enigine can handle it)
 
 			if piece_executing_move != 64 { //if there is no move matching the specifications, this code won't be excuted, instead the premove sequence will end at this point (else statement)
 				var original_pos [2]uint16 = pieces_a[piece_executing_move].Give_Pos()
@@ -103,27 +103,28 @@ restart_marker:
 				premoves_array = premoves_array[1:]
 				player_change = true
 				time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
-			} else {
+			} else { //immmediately end the premove phase if there is one error in the premove sequence
 				premoves_array = nil
 			}
-		} else if ending_premoves { //soll im optimalfall nur einmal ausgeführt werden
+		} else if ending_premoves { //should only be executed once after the premove phase
 			draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 			use_clipboard_as_premoves = false
 			ending_premoves = false
 			draw_moves_sidebar(a, moves_counter-1, pgn_moves_a)
-			//<-m_channel //there is a bug where you can the mouse_handler already reads when the program is still premoving
+			clear_m_channel(m_channel) //this is necessary cuz otherwise pieces would be selected unexpextetly after the premove phase if the user made mlus inputs during this phase
 		}
 
 		if !use_clipboard_as_premoves { //wenn die andere restart methode ausgeführt wird, dann sollt hier noch noch überprüft werden ob restart == false ist, da es sonst zu fehlern kommt
 			select {
-			case mouse_input := <-m_channel:
+			case mouse_input := <-m_channel: //get the mouse input if there is any from the mouse channel
 
 				if dragging && !(mouse_input[0] == 1 && mouse_input[1] == 0) { //wenn nichts gehalten wird dann löschen
 					draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
 					dragging = false
 				}
 
-				if mouse_input[0] == 1 && mouse_input[1] == 1 {
+				if mouse_input[0] == 1 && mouse_input[1] == 1 { //if left clicked was pressed
+					//check the buttons
 					if one_move_back.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						if moves_counter >= 2 {
 							moves_counter = moves_counter - 2
@@ -141,28 +142,29 @@ restart_marker:
 						goto restart_marker
 					} else if save_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						parser.Write_PGN_File(pgn_moves_a, name_player_white, name_player_black)
-					} else if int(moves_counter) == len(moves_a) && pause_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
-						if pause_button.Switch(38, 37, 34) {
+					} else if int(moves_counter) == len(moves_a) && pause_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) { //the pause button will only work if the user is reviewing the current move
+						if pause_button.Switch(38, 37, 34) { //if pause was presed
 							white_time_counter.Stop_Counting()
 							black_time_counter.Stop_Counting()
-						} else if white_is_current_player {
+						} else if white_is_current_player { //if pause was released and white is current player
 							white_time_counter.Init_Counting()
-						} else if !white_is_current_player {
+						} else if !white_is_current_player { //if pause was released and white is current player
 							black_time_counter.Init_Counting()
 						}
-					} else {
+					} else { //otherwise the program checks if a piece was clicked
 						current_field = calc_field(a, uint16(mouse_input[2]), uint16(mouse_input[3]), 0)
-						temp_current_piece, piece_index = get_current_piece(pieces_a, current_field)
+						temp_current_piece, piece_index = get_current_piece(pieces_a, current_field) //get the piece
 
-						//auswählen eines pieces
+						//if a piece was clicked that is in the correct color and deselect_piece_after_clicking is off or no piece was selected before or there was a piece selected but it was not the same
 						if temp_current_piece != nil && temp_current_piece.Is_White_Piece() == white_is_current_player && (!deselect_piece_after_clicking || (current_piece == nil || temp_current_piece.Give_Pos() != current_piece.Give_Pos())) {
+							//select the piece
 							current_piece = temp_current_piece
 							current_legal_moves = current_piece.Give_Legal_Moves()
 							promotion = 0
 							draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
 							piece_is_selected = uint16(piece_index)
 
-						} else if piece_is_selected != 64 {
+						} else if piece_is_selected != 64 { //if there is a piece selected already
 							//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
 							pieces_a, piece_is_selected, player_change, move_string = move_if_current_field_is_in_legal_moves(current_field, pieces_a, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
 
@@ -176,11 +178,11 @@ restart_marker:
 						}
 					}
 
-				} else if mouse_input[1] == -1 && mouse_input[0] == 1 {
+				} else if mouse_input[1] == -1 && mouse_input[0] == 1 { //if left click was released
 					current_field = calc_field(a, uint16(mouse_input[2]), uint16(mouse_input[3]), 0)
 					temp_current_piece, _ = get_current_piece(pieces_a, current_field)
 
-					if piece_is_selected != 64 {
+					if piece_is_selected != 64 { //if there is a piece selected
 						//überprüfen ob in current legal moves
 						pieces_a, piece_is_selected, player_change, move_string = move_if_current_field_is_in_legal_moves(current_field, pieces_a, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
 
@@ -191,16 +193,16 @@ restart_marker:
 							piece_is_selected = 64
 						}
 					}
-				} else if mouse_input[1] == 0 && mouse_input[0] == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player {
+				} else if mouse_input[1] == 0 && mouse_input[0] == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player { //if the left button is pressed and there is a current piece in the correct color
 					//wenn die maustaste gehalten wird, wird ein ghosttpiece gemalt, welches der maus folgt
 					dragging = true
 					pieces.Draw_To_Point(current_piece, w_x, w_y, a, uint16(mouse_input[2]), uint16(mouse_input[3]), -int16(a/2), -int16(a/2), 50, uint16(mouse_input[2]))
 				}
 
-			default:
+			default: //prevents lag or high cpu ussage
 				time.Sleep(5 * time.Millisecond)
 			}
-			if !friendly_game && draw_timers(white_time_counter, black_time_counter, a) {
+			if !friendly_game && draw_timers(white_time_counter, black_time_counter, a) { //restart if one player has no time left
 				display_message(0, a, white_is_current_player)
 				restart_window = true
 				gor_status <- true
@@ -384,6 +386,15 @@ func mouse_handler(m_channel chan [4]int16, gor_status chan bool) {
 				}
 			}
 		}
+	}
+}
+
+func clear_m_channel(m_channel chan [4]int16) {
+	select {
+	case <-m_channel:
+		fmt.Println("there was something in the channel --> cleared")
+	default:
+		fmt.Println("channel empty anyway")
 	}
 }
 

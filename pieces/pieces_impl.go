@@ -95,8 +95,8 @@ func (p *Pawn) can_do_enpassant(pieces_a [64]Piece, field, en_passant_pawn_pos [
 	for i := 0; i < len(pieces_a); i++ {
 		if pieces_a[i] != nil {
 			if en_passant_pawn, ok := pieces_a[i].(*Pawn); ok && pieces_a[i].Is_White_Piece() != p.Is_White_Piece() && pieces_a[i].Give_Pos() == en_passant_pawn_pos {
-				//andersfarbiger pawn rechts neben dem pawn --> en passant rechts
 				if en_passant_pawn.Has_moved > 0 && en_passant_pawn.Has_moved+1 == moves_counter {
+					//if the pawn trying to take enpassant has done a double step the last move is indicated by the has_moved var
 					p.Append_Legal_Moves([3]uint16{field[0], field[1], uint16(i)})
 				}
 			}
