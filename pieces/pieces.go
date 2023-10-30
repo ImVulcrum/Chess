@@ -208,6 +208,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 	var take string = ""
 
 	if king, ok := piece.(*King); ok {
+		fmt.Println(king.Has_moved)
 		if new_position[2] == 64 { //normal move
 			king.Has_moved = 1
 		} else if new_position[2] <= 63 { //castle
@@ -225,7 +226,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 				fmt.Println("Panic: Error has occured, Rook for Castle is not on expected position")
 			}
 		} else if new_position[2] >= 66 && new_position[2] <= 129 { //king take move
-			king.Has_moved = 0
+			king.Has_moved = 1 //??? was set to zero before?
 			pieces_a[new_position[2]-66] = nil
 			take = "x"
 		} else {
