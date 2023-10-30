@@ -311,14 +311,14 @@ func game_history_handler(moves_counter int16, moves_a [][64]pieces.Piece, piece
 		pgn_moves_a = append(pgn_moves_a, move_string)
 	} else if !array_one_is_equal_to_array_two(pieces_a, moves_a[moves_counter]) { //if there was a move changed
 		if game_history_can_be_changed { //if it's allowed to change a move in the history, this block replaces the move in the moves array with the current one and cuts of the rest of the array
-			fmt.Println("there was a move changed in the game history")
+			//there was a move changed in the game history
 			moves_a[moves_counter] = pieces.Copy_Array(pieces_a)
 			moves_a = moves_a[:moves_counter+1]
 
 			pgn_moves_a[moves_counter] = move_string
 			pgn_moves_a = pgn_moves_a[:moves_counter+1]
 		} else { //if it's not allowed it just deletes the move made and resets
-			fmt.Println("changed game history although this is not allowed")
+			//changed game history although this is not allowed
 			pieces_a = pieces.Copy_Array(moves_a[moves_counter])
 		}
 	}
@@ -388,9 +388,9 @@ func mouse_handler(m_channel chan [4]int16, gor_status chan bool) {
 func clear_m_channel(m_channel chan [4]int16) {
 	select {
 	case <-m_channel:
-		fmt.Println("there was something in the channel --> cleared")
+		//there was something in the channel --> cleared
 	default:
-		fmt.Println("channel empty anyway")
+		//channel empty anyway
 	}
 }
 
@@ -498,10 +498,8 @@ func get_move_string(current_piece_index int, original_pos [2]uint16, piece_prom
 		if index_of_other_piece, _ := parser.Get_Piece_Index_And_Move_Index(pieces_a, pieces_a[current_piece_index].Give_Pos(), pieces_a[current_piece_index].Is_White_Piece(), piece_name, "0", current_piece_index); index_of_other_piece != 64 {
 			//there is another piece that can execute the same move which means the pgn string is supposed to include more detailed information about the original position of the moved piece
 			if pieces_a[index_of_other_piece].Give_Pos()[0] != original_pos[0] {
-				//fmt.Println("the other piece has a different x cord --> move string will include the x cord")
 				original_field = parser.Translate_Field_Cord_To_PGN_String(original_pos[0], true)
 			} else if pieces_a[index_of_other_piece].Give_Pos()[1] != original_pos[1] {
-				//fmt.Println("the other piece has a different y cord --> move string will include the y cord")
 				original_field = parser.Translate_Field_Cord_To_PGN_String(original_pos[1], false)
 			}
 		}

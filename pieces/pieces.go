@@ -208,7 +208,6 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 	var take string = ""
 
 	if king, ok := piece.(*King); ok {
-		fmt.Println(king.Has_moved)
 		if new_position[2] == 64 { //normal move
 			king.Has_moved = 1
 		} else if new_position[2] <= 63 { //castle
@@ -267,8 +266,7 @@ func Move_Piece_To(piece Piece, new_position [3]uint16, moves_counter int16, pie
 			pieces_a[new_position[2]] = nil
 			take = "x"
 		} else {
-			fmt.Println(new_position[2])
-			fmt.Println("panic: Error has occured, normal piece move status is out of range")
+			fmt.Println("panic: Error has occured, normal piece move status is out of range with:", new_position[2])
 		}
 	}
 
@@ -450,15 +448,9 @@ func Calc_Moves_With_Check(pieces_a [64]Piece, moves_counter int16, current_king
 
 			pieces_a[i].Clear_Legal_Moves()
 
-			// if i == current_king_index {
-			// 	fmt.Println(current_legal_moves)
-			// }
-
 			for k := 0; k < len(current_legal_moves); k++ { //iterates trough the legal moves for the current piece
 				temp_pieces_a := Copy_Array(pieces_a) //this creates a deep copy of the pieces array --> resets after evry legal move
 				temp_pieces_a, _, _ = Move_Piece_To(temp_pieces_a[i], current_legal_moves[k], moves_counter, temp_pieces_a)
-
-				//fmt.Println(temp_pieces_a[current_king_index].(*King).Give_Pos())
 
 				if !temp_pieces_a[current_king_index].(*King).Is_In_Check(temp_pieces_a, moves_counter) {
 

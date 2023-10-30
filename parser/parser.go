@@ -55,10 +55,6 @@ func Create_Array_Of_Moves(input_string string) []string {
 			cleanedMoves = append(cleanedMoves, move)
 		}
 	}
-	// for i := 0; i < len(cleanedMoves); i++ {
-	// 	fmt.Println("-" + cleanedMoves[i] + "-")
-	// }
-	// fmt.Println("------------")
 	return cleanedMoves
 }
 
@@ -100,7 +96,7 @@ func Get_Correct_Move(move string, pieces_a [64]pieces.Piece, current_king_index
 		}
 	}
 	if piece_executing_move == 64 {
-		fmt.Println("\n-------------------------------------------------------------------\n" + `Es gibt kein piece mit dem Move: "` + move + `"` + "\n-------------------------------------------------------------------\n")
+		fmt.Println("\n-------------------------------------------------------------------\n" + `there is no piece with the move: "` + move + `"` + "\n-------------------------------------------------------------------\n")
 	}
 	return piece_executing_move, index_of_correct_legal_move, pawn_promotion_to_piece
 }
