@@ -20,16 +20,14 @@ import (
 
 func main() {
 	fmt.Println("start game")
-	var restart_window bool = false
+	var restart_window bool = false //decides if a new window is created on initialize --> false by default so that one window will be created
 
 	var deselect_piece_after_clicking = false
 	var start_window_width uint16 = 600 //the start window is technically scalable but with resolutions higher than 800 graphical bugs are occuring due to the font size
 	game_timer, friendly_game, duration_of_premove_animation, use_clipboard_as_premoves, name_player_white, name_player_black, a, troll_mode := start_menu(start_window_width / 3 * 2)
 
 restart_marker:
-
-	//~ var restart bool
-	var image_location string = set_image_string(troll_mode)
+	var image_location string = set_image_string(troll_mode) //troll mode decides which picture should be used for the pieces
 	var game_history_can_be_changed bool = friendly_game
 	var w_x, w_y uint16 = 10 * a, 8 * a
 	var white_is_current_player bool = false
@@ -50,23 +48,21 @@ restart_marker:
 	var promotion uint16 = 0
 	var move_string string
 	var take string = ""
-
-	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, save_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer, name_player_white, name_player_black, image_location)
-	premoves_array := parser.Create_Array_Of_Moves(premoves)
-
-	draw_pieces(pieces_a, w_x, w_y, a)
-
-	display_message(2, a, false)
-
 	m_channel := make(chan [4]int16, 1)
 	gor_status := make(chan bool, 1) //needs to be a buffered channel, indicated by the one, otherwise the program will hold until the channel is empty after puting something to it
 
-	go mouse_handler(m_channel, gor_status)
+	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, save_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer, name_player_white, name_player_black, image_location)
+	premoves_array := parser.Create_Array_Of_Moves(premoves) //get the premoves array
+
+	//draw_pieces(pieces_a, w_x, w_y, a) //draw pieces for the first time, actually not really needed
+	display_message(2, a, false) //starting message
+
+	go mouse_handler(m_channel, gor_status) //activate the mouse handler so that mouse input can be obtained
 
 	for { //gameloop
 
-		if player_change {
-			pieces_a, moves_a, pgn_moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed, move_string, pgn_moves_a)
+		if player_change { //after a player change do the following:
+			pieces_a, moves_a, pgn_moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed, move_string, pgn_moves_a) //add the current move to pgn moves array as well as to the normal moves array (important for back and forward)
 
 			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) //this function sets the current_king_index
 			pieces_a, current_player_has_no_legal_moves = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)                                               //calc the move
@@ -77,30 +73,30 @@ restart_marker:
 				draw_moves_sidebar(a, moves_counter-1, pgn_moves_a)
 			}
 
-			if restart_window = restart_handler(current_player_has_no_legal_moves, check, a, white_is_current_player, gor_status); restart_window {
+			if restart_window = restart_handler(current_player_has_no_legal_moves, check, a, white_is_current_player, gor_status); restart_window { //check if the re is a checkmate or stalemate
 				goto restart_marker
 			}
 
-			if !use_clipboard_as_premoves && !friendly_game && int(moves_counter) == len(moves_a) { //only start the timers if we're not premoving
+			if !use_clipboard_as_premoves && !friendly_game && int(moves_counter) == len(moves_a) { //only start the timers if we're not premoving and it isn'nt a friendly game and no older game state is reviewed
 				time_handler(white_is_current_player, white_time_counter, black_time_counter, pause_button)
 			}
 		}
 
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
-			var piece_promoted_to string = ""
-			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index)
+			var piece_promoted_to string
+			piece_executing_move, index_of_move, piece_promoting_to := parser.Get_Correct_Move(premoves_array[0], pieces_a, current_king_index) //get the move from the first element in the premoves array
 
 			if piece_executing_move != 64 { //if there is no move matching the specifications, this code won't be excuted, instead the premove sequence will end at this point (else statement)
-				var original_pos [2]uint16 = pieces_a[piece_executing_move].Give_Pos()
+				var original_pos [2]uint16 = pieces_a[piece_executing_move].Give_Pos() //get the position so that the pgn string can be recreated for the sidebar
 
 				pieces_a, promotion, take = pieces.Move_Piece_To(pieces_a[piece_executing_move], pieces_a[piece_executing_move].Give_Legal_Moves()[index_of_move], moves_counter, pieces_a)
 				if promotion != 64 {
 					pieces_a, piece_promoted_to = pawn_promotion(w_x, w_y, a, piece_executing_move, pieces_a, piece_promoting_to, m_channel)
 					piece_promoted_to = "=" + piece_promoted_to
 				}
-				move_string = get_move_string(piece_executing_move, original_pos, piece_promoted_to, take, pieces_a)
+				move_string = get_move_string(piece_executing_move, original_pos, piece_promoted_to, take, pieces_a) //get the pgn string for the sidebar
 
-				premoves_array = premoves_array[1:]
+				premoves_array = premoves_array[1:] //remove the first element of the premoves array
 				player_change = true
 				time.Sleep(time.Duration(duration_of_premove_animation) * time.Millisecond)
 			} else {
@@ -246,10 +242,10 @@ func start_menu(start_window_size uint16) (int64, bool, int, bool, string, strin
 	w_size.Draw()
 	p_time.Draw()
 
-	var friendly_game buttons.Button = *buttons.New(start_window_size/20, start_window_size/13*10, start_window_size/22*10, start_window_size/14, "friendly game", highlight_color1[0], highlight_color1[1], highlight_color1[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
-	var use_premoves buttons.Button = *buttons.New(start_window_size/18*10, start_window_size/13*10, start_window_size/25*10, start_window_size/14, "use premoves", highlight_color2[0], highlight_color2[1], highlight_color2[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
-	var troll_mode buttons.Button = *buttons.New(start_window_size, start_window_size/13*10, start_window_size/22*10, start_window_size/14, "extreme mode", highlight_color1[0], highlight_color1[1], highlight_color1[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/17)
-	var start buttons.Button = *buttons.New(start_window_size/15*10, start_window_size/11*10, start_window_size/50*10, start_window_size/14, "Start", primary_color[0], primary_color[1], primary_color[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/50, int(start_window_size)/19)
+	var friendly_game buttons.Button = buttons.New(start_window_size/20, start_window_size/13*10, start_window_size/22*10, start_window_size/14, "friendly game", highlight_color1[0], highlight_color1[1], highlight_color1[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
+	var use_premoves buttons.Button = buttons.New(start_window_size/18*10, start_window_size/13*10, start_window_size/25*10, start_window_size/14, "use premoves", highlight_color2[0], highlight_color2[1], highlight_color2[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/19)
+	var troll_mode buttons.Button = buttons.New(start_window_size, start_window_size/13*10, start_window_size/22*10, start_window_size/14, "extreme mode", highlight_color1[0], highlight_color1[1], highlight_color1[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/100, int(start_window_size)/17)
+	var start buttons.Button = buttons.New(start_window_size/15*10, start_window_size/11*10, start_window_size/50*10, start_window_size/14, "Start", primary_color[0], primary_color[1], primary_color[2], secondary_color[0], secondary_color[1], secondary_color[2], start_window_size/50, int(start_window_size)/19)
 	friendly_game.Draw()
 	use_premoves.Draw()
 	troll_mode.Draw()
@@ -327,7 +323,7 @@ func game_history_handler(moves_counter int16, moves_a [][64]pieces.Piece, piece
 	return pieces_a, moves_a, pgn_moves_a
 }
 
-func time_handler(white_is_current_player bool, white_time_counter time_counter.Counter, black_time_counter time_counter.Counter, pause_button *buttons.Button) {
+func time_handler(white_is_current_player bool, white_time_counter time_counter.Counter, black_time_counter time_counter.Counter, pause_button buttons.Button) {
 	// if pause_button.Is_Active() {
 	if pause_button.Give_State() {
 		pause_button.Switch(0, 0, 0)
@@ -705,15 +701,15 @@ func draw_player_names(name_player_white, name_player_black string, a uint16) {
 	gfx.SchreibeFont(92*a/10, 2*a/10, name_player_black)
 }
 
-func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_white string, name_player_black string, image_location string) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, *buttons.Button, *buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
+func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_white string, name_player_black string, image_location string) ([64]pieces.Piece, int, int, buttons.Button, buttons.Button, buttons.Button, buttons.Button, buttons.Button, [][64]pieces.Piece, time_counter.Counter, time_counter.Counter, []string) {
 	var moves_a [][64]pieces.Piece
 	var pgn_moves_a []string
 
-	var one_move_back buttons.Button = *buttons.New(81*a/10, 7*a+a/10, 8*a/10, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
-	var one_move_forward buttons.Button = *buttons.New(91*a/10, 7*a+a/10, 8*a/10, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
-	var restart_button buttons.Button = *buttons.New(8*a+a/7, 62*a/10, 17*a/10, 3*a/10, "restart game", 86, 82, 77, 200, 200, 200, (a / 10), int(a/5))
-	var pause_button *buttons.Button = buttons.New(91*a/10, 66*a/10, 8*a/10, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
-	var save_button *buttons.Button = buttons.New(81*a/10, 66*a/10, 8*a/10, 3*a/10, "save", 86, 82, 77, 200, 200, 200, (a / 7), int(a/5))
+	var one_move_back buttons.Button = buttons.New(81*a/10, 7*a+a/10, 8*a/10, a-a/5, "<", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
+	var one_move_forward buttons.Button = buttons.New(91*a/10, 7*a+a/10, 8*a/10, a-a/5, ">", 38, 37, 34, 200, 200, 200, (a / 4), int(a/2))
+	var restart_button buttons.Button = buttons.New(8*a+a/7, 62*a/10, 17*a/10, 3*a/10, "restart game", 86, 82, 77, 200, 200, 200, (a / 10), int(a/5))
+	var pause_button buttons.Button = buttons.New(91*a/10, 66*a/10, 8*a/10, 3*a/10, "pause", 86, 82, 77, 200, 200, 200, (a / 15), int(a/5))
+	var save_button buttons.Button = buttons.New(81*a/10, 66*a/10, 8*a/10, 3*a/10, "save", 86, 82, 77, 200, 200, 200, (a / 7), int(a/5))
 
 	if !restart {
 		gfx.Fenster(w_x, w_y)
