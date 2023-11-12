@@ -120,19 +120,19 @@ func (s *slid) If_Clicked_Draw(m_x, m_y uint16) {
 	}
 }
 
-func (s *slid) Redraw(x uint16) {
+func (s *slid) Redraw(m_x uint16) {
 	gfx.UpdateAus()
 
-	if x > s.x+s.length { //if the cord of the mouse is greater than the end of the slider, it's setted to the end
-		x = s.x + s.length
-	} else if x < s.x { //if the cord of the mouse is smaller than the beginning of the slider, it's setted to the beginning
-		x = s.x
+	if m_x > s.x+s.length { //if the cord of the mouse is greater than the end of the slider, it's setted to the end
+		m_x = s.x + s.length
+	} else if m_x < s.x { //if the cord of the mouse is smaller than the beginning of the slider, it's setted to the beginning
+		m_x = s.x
 	}
 
 	//überschreiben der ursprünglichen font
 	s.draw(true)
 
-	s.x_box_cord = x
+	s.x_box_cord = m_x
 	s.value = (float32(s.x_box_cord)*s.max_value-s.max_value*float32(s.x))/float32(s.length) + s.min_value //calc the value
 
 	s.draw(false)

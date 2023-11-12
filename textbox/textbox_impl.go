@@ -66,15 +66,15 @@ func (t *tbox) draw(highlight bool) {
 	gfx.SchreibeFont(t.x+t.h/10, t.y+t.h/15, t.text)
 }
 
-func (t *tbox) Is_Clicked(x, y uint16) bool {
-	if x >= t.x && x <= t.x+t.w && y >= t.y && y <= t.y+t.h {
+func (t *tbox) Is_Clicked(m_x, m_y uint16) bool {
+	if m_x >= t.x && m_x <= t.x+t.w && m_y >= t.y && m_y <= t.y+t.h {
 		return true
 	}
 	return false
 }
 
-func (t *tbox) If_Clicked_Write(x, y uint16) {
-	if t.Is_Clicked(x, y) {
+func (t *tbox) If_Clicked_Write(m_x, m_y uint16) {
+	if t.Is_Clicked(m_x, m_y) {
 		t.Write()
 	}
 }
