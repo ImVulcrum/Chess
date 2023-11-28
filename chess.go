@@ -22,12 +22,12 @@ func main() {
 	fmt.Println("start game")
 	var restart_window bool = false //decides if a new window is created on initialize --> false by default so that one window will be created
 
-	var deselect_piece_after_clicking = false
-	var start_window_width uint16 = 600 //the start window is technically scalable but with resolutions higher than 800 graphical bugs are occuring due to the font size
+	var deselect_piece_after_clicking = false //decides whether a selected piece should be deselected after executing a second click directly on it
+	var start_window_width uint16 = 600       //the start window is technically scalable but with resolutions higher than 800 graphical bugs are occuring due to the font size implementation of gfx
 	game_timer, friendly_game, duration_of_premove_animation, use_clipboard_as_premoves, name_player_white, name_player_black, a, troll_mode := start_menu(start_window_width / 3 * 2)
 
-restart_marker:
-	var image_location string = set_image_string(troll_mode) //troll mode decides which picture should be used for the pieces
+restart_marker: //jump marker for the restart
+	var image_location string = set_image_string(troll_mode) //troll mode decides which picture should be used for the pieces, if activated a picture of a cloud will be used
 	var game_history_can_be_changed bool = friendly_game
 	var w_x, w_y uint16 = 10 * a, 8 * a
 	var white_is_current_player bool = false
@@ -48,13 +48,15 @@ restart_marker:
 	var promotion uint16 = 0
 	var move_string string
 	var take string = ""
-	m_channel := make(chan [4]int16, 1)
-	gor_status := make(chan bool, 1) //needs to be a buffered channel, indicated by the one, otherwise the program will hold until the channel is empty after puting something to it
+	var review_the_game bool = false
+	var end_of_game bool = false
+	m_channel := make(chan [4]int16, 1) //channel gets the latest mouse input, structured as described in the following: button, status, x_cord, y_cord
+	gor_status := make(chan bool, 1)    //needs to be a buffered channel, indicated by the one, otherwise the program will hold until the channel is empty after puting something to it
 
+	// execute the initialize to define important vars and create the window
 	pieces_a, white_king_index, black_king_index, one_move_back, one_move_forward, restart_button, pause_button, save_button, moves_a, white_time_counter, black_time_counter, pgn_moves_a := initialize(w_x, w_y, a, restart_window, game_timer, name_player_white, name_player_black, image_location)
 	premoves_array := parser.Create_Array_Of_Moves(premoves) //get the premoves array
 
-	//draw_pieces(pieces_a, w_x, w_y, a) //draw pieces for the first time, actually not really needed
 	display_message(2, a, false) //starting message
 
 	go mouse_handler(m_channel, gor_status) //activate the mouse handler so that mouse input can be obtained
@@ -62,8 +64,7 @@ restart_marker:
 	for { //gameloop
 
 		if player_change { //after a player change do the following:
-			pieces_a, moves_a, pgn_moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed, move_string, pgn_moves_a) //add the current move to pgn moves array as well as to the normal moves array (important for back and forward)
-
+			pieces_a, moves_a, pgn_moves_a = game_history_handler(moves_counter, moves_a, pieces_a, game_history_can_be_changed, move_string, pgn_moves_a)                        //add the current move to pgn moves array as well as to the normal moves array (important for back and forward)
 			white_is_current_player, current_king_index, player_change, moves_counter = change_player(white_is_current_player, white_king_index, black_king_index, moves_counter) //this function sets the current_king_index
 			pieces_a, current_player_has_no_legal_moves = pieces.Calc_Moves_With_Check(pieces_a, moves_counter, current_king_index)                                               //calc the move
 			check = pieces_a[current_king_index].(*pieces.King).Is_In_Check(pieces_a, moves_counter)                                                                              //check if the current king is in check
@@ -72,14 +73,24 @@ restart_marker:
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
 				draw_moves_sidebar(a, moves_counter-1, pgn_moves_a)
 			}
-
-			if restart_window = restart_handler(current_player_has_no_legal_moves, check, a, white_is_current_player, gor_status); restart_window { //restart if the premove handler calculated the end of the game
-				goto restart_marker
+			if !end_of_game {
+				if restart_window = restart_handler(current_player_has_no_legal_moves, check, a, white_is_current_player, gor_status, false); restart_window { //restart if the premove handler calculated the end of the game
+					goto restart_marker
+				} else if current_player_has_no_legal_moves {
+					review_the_game = true
+					end_of_game = true
+				}
 			}
 
 			if !use_clipboard_as_premoves && !friendly_game && int(moves_counter) == len(moves_a) { //only start the timers if we're not premoving and it is a competetive game and the current move is reviewed
 				time_handler(white_is_current_player, white_time_counter, black_time_counter, pause_button)
 			}
+			if review_the_game && !friendly_game && int(moves_counter) == len(moves_a) && !end_of_game {
+				review_the_game = false //reset review game if the player is reviewing the most recent move
+			} else if review_the_game {
+				review_mask(a) //creates a review mask, to visulize that the game is in review state
+			}
+			gfx.UpdateAn()
 		}
 
 		if len(premoves_array) > 0 { //if there are premoves the program premoves
@@ -107,6 +118,7 @@ restart_marker:
 			use_clipboard_as_premoves = false
 			ending_premoves = false
 			draw_moves_sidebar(a, moves_counter-1, pgn_moves_a)
+			gfx.UpdateAn()
 			clear_m_channel(m_channel) //this is necessary cuz otherwise pieces would be selected unexpextetly after the premove phase if the user made mlus inputs during this phase
 		}
 
@@ -116,6 +128,7 @@ restart_marker:
 
 				if dragging && !(mouse_input[0] == 1 && mouse_input[1] == 0) { //wenn nichts gehalten wird dann löschen
 					draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
+					gfx.UpdateAn()
 					dragging = false
 				}
 
@@ -124,17 +137,20 @@ restart_marker:
 					if one_move_back.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						if moves_counter >= 2 {
 							moves_counter = moves_counter - 2
-							pieces_a = pieces.Copy_Array(moves_a[moves_counter])
+							pieces_a = pieces.Copy_Array(moves_a[moves_counter]) //set the pieces array to the moves counter reduced by 2 (cuz it will be increased by one in the next cycle so that the button is actually going back one move and not two)
 							player_change = true
+							if !friendly_game {
+								review_the_game = true
+							}
 						}
 					} else if one_move_forward.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						if int(moves_counter) < len(moves_a) {
-							pieces_a = pieces.Copy_Array(moves_a[moves_counter])
+							pieces_a = pieces.Copy_Array(moves_a[moves_counter]) //set the pieces array to the moves couhnter, which is at this point exactly one higher than the index of the current pieces array
 							player_change = true
 						}
 					} else if restart_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
-						restart_window = true
-						gor_status <- true
+						restart_window = true //prevents the initialize function from creating a new window
+						gor_status <- true    //kills the mouse_handler which is running in concurrency
 						goto restart_marker
 					} else if save_button.Is_Clicked(uint16(mouse_input[2]), uint16(mouse_input[3])) {
 						parser.Write_PGN_File(pgn_moves_a, name_player_white, name_player_black)
@@ -147,19 +163,19 @@ restart_marker:
 						} else if !white_is_current_player { //if pause was released and white is current player
 							black_time_counter.Init_Counting()
 						}
-					} else { //otherwise the program checks if a piece was clicked
+					} else if !review_the_game { //otherwise the program checks if a piece was clicked
 						current_field = calc_field(a, uint16(mouse_input[2]), uint16(mouse_input[3]), 0)
 						temp_current_piece, piece_index = get_current_piece(pieces_a, current_field) //get the piece
 
-						//if a piece was clicked that is in the correct color and deselect_piece_after_clicking is off or no piece was selected before or there was a piece selected but it was not the same
+						//if a piece was selected before that is in the correct color and deselect_piece_after_clicking is off or no piece was selected before or there was a piece selected but it was not the same
 						if temp_current_piece != nil && temp_current_piece.Is_White_Piece() == white_is_current_player && (!deselect_piece_after_clicking || (current_piece == nil || temp_current_piece.Give_Pos() != current_piece.Give_Pos())) {
 							//select the piece
 							current_piece = temp_current_piece
 							current_legal_moves = current_piece.Give_Legal_Moves()
 							promotion = 0
 							draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, true, current_king_index, check)
+							gfx.UpdateAn()
 							piece_is_selected = uint16(piece_index)
-
 						} else if piece_is_selected != 64 { //if there is a piece selected already
 							//überprüfen ob auf ein Feld in Legal Moves geklickt wurde
 							pieces_a, piece_is_selected, player_change, move_string = move_if_current_field_is_in_legal_moves(current_field, pieces_a, piece_is_selected, a, w_x, w_y, current_king_index, check, moves_counter, m_channel)
@@ -169,12 +185,13 @@ restart_marker:
 							if (temp_current_piece == nil) || (temp_current_piece != nil && (temp_current_piece.Give_Pos() == current_piece.Give_Pos() || temp_current_piece.Is_White_Piece() != white_is_current_player)) {
 								current_piece = nil
 								draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+								gfx.UpdateAn()
 								piece_is_selected = 64
 							}
 						}
 					}
 
-				} else if mouse_input[1] == -1 && mouse_input[0] == 1 { //if left click was released
+				} else if mouse_input[1] == -1 && mouse_input[0] == 1 && !review_the_game { //if left click was released
 					current_field = calc_field(a, uint16(mouse_input[2]), uint16(mouse_input[3]), 0)
 					temp_current_piece, _ = get_current_piece(pieces_a, current_field)
 
@@ -186,10 +203,11 @@ restart_marker:
 						if (temp_current_piece == nil) || (temp_current_piece != nil && ((temp_current_piece.Is_White_Piece() != white_is_current_player) || (temp_current_piece.Is_White_Piece() == white_is_current_player && temp_current_piece.Give_Pos() != current_piece.Give_Pos()))) {
 							current_piece = nil
 							draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+							gfx.UpdateAn()
 							piece_is_selected = 64
 						}
 					}
-				} else if mouse_input[1] == 0 && mouse_input[0] == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player { //if the left button is pressed and there is a current piece in the correct color
+				} else if mouse_input[1] == 0 && mouse_input[0] == 1 && current_piece != nil && current_piece.Is_White_Piece() == white_is_current_player && !review_the_game { //if the left button is pressed and there is a current piece in the correct color
 					//wenn die maustaste gehalten wird, wird ein ghosttpiece gemalt, welches der maus folgt
 					dragging = true
 					pieces.Draw_To_Point(current_piece, w_x, w_y, a, uint16(mouse_input[2]), uint16(mouse_input[3]), -int16(a/2), -int16(a/2), 50, uint16(mouse_input[2]))
@@ -198,11 +216,14 @@ restart_marker:
 			default: //prevents lag or high cpu ussage
 				time.Sleep(5 * time.Millisecond)
 			}
-			if !friendly_game && draw_timers(white_time_counter, black_time_counter, a) { //restart if one player has no time left
-				display_message(0, a, white_is_current_player)
-				restart_window = true
-				gor_status <- true
-				goto restart_marker
+			if !friendly_game && draw_timers(white_time_counter, black_time_counter, a) && !review_the_game { //restart if one player has no time left
+				if restart_window = restart_handler(current_player_has_no_legal_moves, check, a, white_is_current_player, gor_status, true); restart_window { //restart if the premove handler calculated the end of the game
+					goto restart_marker
+				} else { //if the player decides to review by clicking on any other button than enter or esc, the game is put into the review state
+					review_the_game = true
+					end_of_game = true
+					review_mask(a)
+				}
 			}
 		}
 	}
@@ -343,14 +364,22 @@ func time_handler(white_is_current_player bool, white_time_counter time_counter.
 	// }
 }
 
-func restart_handler(current_player_has_no_legal_moves bool, check bool, a uint16, white_is_current_player bool, gor_status chan bool) bool {
+func restart_handler(current_player_has_no_legal_moves bool, check bool, a uint16, white_is_current_player bool, gor_status chan bool, time_is_up bool) bool {
+	var review bool
+
 	if current_player_has_no_legal_moves { //game end / restart
-		var review bool
 		if check {
 			review = display_message(0, a, white_is_current_player)
 		} else {
 			review = display_message(1, a, white_is_current_player)
 		}
+		if review {
+			return false
+		}
+		gor_status <- true
+		return true
+	} else if time_is_up {
+		review = display_message(0, a, white_is_current_player)
 		if review {
 			return false
 		}
@@ -383,6 +412,13 @@ func mouse_handler(m_channel chan [4]int16, gor_status chan bool) {
 			}
 		}
 	}
+}
+
+func review_mask(a uint16) {
+	gfx.Stiftfarbe(0, 0, 0)
+	gfx.Transparenz(120)
+	gfx.Vollrechteck(0, 0, a*8, a*8)
+	gfx.Transparenz(0)
 }
 
 func clear_m_channel(m_channel chan [4]int16) {
@@ -463,6 +499,7 @@ func move_if_current_field_is_in_legal_moves(current_field [2]uint16, pieces_a [
 
 			if promotion != 64 {
 				draw_board(a, w_x, w_y, current_piece, current_legal_moves, pieces_a, false, current_king_index, check)
+				gfx.UpdateAn()
 				pieces_a, piece_promoting_to = pawn_promotion(w_x, w_y, a, int(piece_is_selected), pieces_a, "A", m_channel)
 				piece_promoting_to = "=" + piece_promoting_to
 			}
@@ -626,7 +663,6 @@ func draw_board(a, w_x, w_y uint16, current_piece pieces.Piece, current_legal_mo
 		}
 	}
 	draw_pieces(pieces_a, w_x, w_y, a)
-	gfx.UpdateAn()
 }
 
 func change_player(white_is_current_player bool, white_king_index, black_king_index int, moves_counter int16) (bool, int, bool, int16) {
@@ -683,7 +719,6 @@ func draw_moves_sidebar(a uint16, moves_counter int16, pgn_moves_a []string) {
 			}
 		}
 	}
-	gfx.UpdateAn()
 }
 
 func draw_player_names(name_player_white, name_player_black string, a uint16) {
@@ -744,7 +779,6 @@ func initialize(w_x, w_y, a uint16, restart bool, game_timer int64, name_player_
 	gfx.Stiftfarbe(48, 46, 43)
 	gfx.Vollrechteck(8*a, 0, 2*a, 6*a)
 
-	//draw_moves_sidebar(a)
 	draw_player_names(name_player_white, name_player_black, a)
 	draw_background(a)
 
