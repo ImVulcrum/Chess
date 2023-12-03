@@ -12,13 +12,13 @@ type butt struct {
 	length       uint16
 	height       uint16
 	name         string
-	r            uint8
+	r            uint8 //color of the button
 	g            uint8
 	b            uint8
-	r_label      uint8
+	r_label      uint8 //color of the label
 	g_label      uint8
 	b_label      uint8
-	label_offset uint16
+	label_offset uint16 //spacing between the left side of the button and the first char of the label (in pixels)
 	font_size    int
 	state        bool
 	active       bool
@@ -45,7 +45,7 @@ func New(x uint16, y uint16, length uint16, height uint16, name string, re, gr, 
 }
 
 func (b *butt) Draw() {
-	if b.active {
+	if b.active { //only draw if active
 		gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)
 		gfx.Stiftfarbe(b.r, b.g, b.b)
 		gfx.Vollrechteck((*b).x, (*b).y, (*b).length, (*b).height)
@@ -54,7 +54,7 @@ func (b *butt) Draw() {
 	}
 }
 
-func (b *butt) Is_Clicked(x, y uint16) bool {
+func (b *butt) Is_Clicked(x, y uint16) bool { //returns true if a click on the button is executed and playes a animation if so
 	if b.active && x >= b.x && x <= b.x+b.length && y >= b.y && y <= b.y+b.height {
 		gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)
 		gfx.Stiftfarbe(0, 0, 0)
@@ -87,7 +87,7 @@ func (b *butt) Is_Active() bool {
 	return b.active
 }
 
-func (b *butt) Switch(re, gr, bl uint8) bool {
+func (b *butt) Switch(re, gr, bl uint8) bool { //turns the button to a switch (with evervy execution of this function the button state is changed and it's color as well)
 	if b.active && b.state {
 		b.state = false
 		gfx.SetzeFont("./resources/fonts/firamono.ttf", b.font_size)

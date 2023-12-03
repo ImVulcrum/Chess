@@ -9,9 +9,9 @@ type tbox struct {
 	y          uint16
 	h          uint16
 	w          uint16
-	bg_color   [3]uint8
-	fg_color   [3]uint8
-	hl_color   [3]uint8
+	bg_color   [3]uint8 //background color
+	fg_color   [3]uint8 //foreground color (text)
+	hl_color   [3]uint8 //highlighting color (when typing or if nothing was entered)
 	max_entry  int
 	text       string
 	enter_text string
@@ -31,7 +31,7 @@ func New(x uint16, y uint16, h uint16, w uint16, bg [3]uint8, fg [3]uint8, hl [3
 	t.enter_text = enter_text
 	t.used = false
 
-	if len(t.enter_text) > t.max_entry {
+	if len(t.enter_text) > t.max_entry { //check if the the default enter text eceeds the length of the slider
 		panic("the original input is longer than it should be")
 	}
 	t.text = t.enter_text
@@ -51,10 +51,10 @@ func (t *tbox) draw(highlight bool) {
 	if !highlight {
 		gfx.Stiftfarbe(t.bg_color[0], t.bg_color[1], t.bg_color[2])
 	} else {
-		gfx.Stiftfarbe(t.hl_color[0], t.hl_color[1], t.hl_color[2])
+		gfx.Stiftfarbe(t.hl_color[0], t.hl_color[1], t.hl_color[2]) //set color to highlight color
 	}
 
-	gfx.Vollrechteck(t.x, t.y, t.w, t.h)
+	gfx.Vollrechteck(t.x, t.y, t.w, t.h) //draw the slider box in the desired color
 
 	if !t.used { //if the box wasn't used, the enter text is supposed to appear in the highlight color
 		gfx.Stiftfarbe(t.hl_color[0], t.hl_color[1], t.hl_color[2])
@@ -66,21 +66,21 @@ func (t *tbox) draw(highlight bool) {
 	gfx.SchreibeFont(t.x+t.h/10, t.y+t.h/15, t.text)
 }
 
-func (t *tbox) Is_Clicked(m_x, m_y uint16) bool {
+func (t *tbox) Is_Clicked(m_x, m_y uint16) bool { //returns true if a click is executed directly on the slider
 	if m_x >= t.x && m_x <= t.x+t.w && m_y >= t.y && m_y <= t.y+t.h {
 		return true
 	}
 	return false
 }
 
-func (t *tbox) If_Clicked_Write(m_x, m_y uint16) {
+func (t *tbox) If_Clicked_Write(m_x, m_y uint16) { //directly move on to the write cycle if the slider was clicked
 	if t.Is_Clicked(m_x, m_y) {
 		t.Write()
 	}
 }
 
 func (t *tbox) Write() {
-	t.draw(true) //draw because the bg color is supposed to change
+	t.draw(true) //draw because the bg color is supposed to change to the highlight color to indicate that the user is in the write cycle of this box
 
 	if !t.used { //if the box wasn't used it is supposed to clear the enter text so that the user can type
 		t.text = ""
