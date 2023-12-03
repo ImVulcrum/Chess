@@ -129,7 +129,7 @@ func (s *slid) Redraw(m_x uint16) {
 		m_x = s.x
 	}
 
-	//überschreiben der ursprünglichen font
+	// überschreiben der ursprünglichen font
 	s.draw(true)
 
 	s.x_box_cord = m_x
